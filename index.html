@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>כולם על הסיפון!</title>
+<style>
+/* Layout: one 1600×900 storybook stage scaled to fit; a sailing-ship world (outlined cartoon shapes, warm sunset light); slides are camera moves and layer fades */
+:root{
+  --night:#13223a; --sea:#1f5f7a; --wood:#8a5a32; --woodD:#5e3a1e; --parch:#fff4de; --cream:#fbefd6;
+  --ink:#20182a; --red:#d8432f; --pom:#c8323a; --gold:#ffc24a; --chat:#1f8a5b; --leaf:#3f8f4a; --sky:#9fc4e8;
+  --f:Arial,'Arial Hebrew',Arimo,'Liberation Sans',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden}
+body{background:var(--night);color:var(--ink);font-family:var(--f)}
+button,input,textarea{font-family:var(--f)}
+svg{display:block}
+svg text{font-family:var(--f)}
+#frame{position:fixed;inset:0;padding:12px 16px}
+#fit{position:relative;width:100%;height:100%}
+#stage{position:absolute;left:50%;top:50%;width:1600px;height:900px;overflow:hidden;border-radius:22px;
+  transform:translate(-50%,-50%) scale(var(--s,.5));background:var(--night);direction:rtl;
+  box-shadow:0 30px 80px rgba(0,0,0,.6);user-select:none;-webkit-user-select:none}
+.layer{position:absolute;inset:0;opacity:0;visibility:hidden;transition:opacity .9s ease,visibility 0s linear .9s}
+.layer.on{opacity:1;visibility:visible;transition:opacity .9s ease,visibility 0s}
+.cam{position:absolute;left:0;top:0;width:1600px;height:900px;transform-origin:0 0;transition:transform 1.6s cubic-bezier(.65,0,.25,1)}
+.fill{position:absolute;inset:0;width:1600px;height:900px}
+/* generic step-revealed element */
+.w{opacity:0;visibility:hidden;transform:translateY(18px);transition:opacity .55s ease,transform .6s cubic-bezier(.34,1.3,.64,1),visibility 0s linear .6s}
+.w.on{opacity:1;visibility:visible;transform:none;transition:opacity .55s ease var(--d,.25s),transform .6s cubic-bezier(.34,1.3,.64,1) var(--d,.25s),visibility 0s}
+.sw{opacity:0;transition:opacity .7s ease}.sw.on{opacity:1}.sw2{opacity:.35;transition:opacity .7s ease}.sw2.on{opacity:1}
+.w.pop{transform:scale(.7) rotate(-6deg)}
+.w.pop.on{transform:rotate(var(--r,0deg))}
+
+/* ---------- shared boxes ---------- */
+.cap{position:absolute;top:44px;right:56px;z-index:30;max-width:820px;background:var(--parch);
+  border:5px solid var(--ink);border-radius:24px;padding:16px 36px 20px;
+  box-shadow:0 8px 0 rgba(10,10,30,.35),0 18px 30px rgba(10,10,30,.35),inset 0 0 0 5px #f2dcb0}
+.cap h2{margin:0;font-weight:700;font-size:62px;line-height:1.1;color:var(--ink);text-wrap:balance}
+.cap p{margin:8px 0 0;font-size:34px;font-weight:700;line-height:1.25;color:#9a4a1e;text-wrap:balance}
+.tag{display:inline-block;font-size:24px;font-weight:700;background:#2f6b57;color:#fff;border-radius:8px;padding:3px 14px;margin-bottom:10px}
+.act{position:absolute;z-index:32;display:flex;align-items:center;gap:22px;background:#e6f5ea;border:5px solid var(--ink);border-radius:26px;
+  padding:16px 30px 18px 34px;box-shadow:0 8px 0 rgba(10,10,30,.3);font-size:36px;font-weight:700;line-height:1.25;color:var(--ink);text-wrap:balance}
+.act .ic{flex:none;width:86px;height:86px;border-radius:50%;background:#2f6b57;border:4px solid var(--ink);display:grid;place-items:center}
+.act .ic svg{width:60px;height:60px}
+.act b{color:#b8361f}
+.act small{display:block;font-size:28px;font-weight:700;color:#2f6b57;margin-bottom:2px}
+.think{background:#fff7d6}
+.think .ic{background:#e0a020}
+.hd{position:absolute;margin:0;text-align:center;font-weight:700;color:var(--cream);text-shadow:0 5px 0 rgba(10,10,30,.55),0 0 24px rgba(10,10,30,.5);line-height:1.08;text-wrap:balance}
+.hd em{font-style:normal;color:var(--gold)}
+.sh{display:block;font-size:38px;font-weight:700;color:#ffe3b8;margin-top:12px;text-shadow:0 3px 0 rgba(10,10,30,.6)}
+.card{position:absolute;background:var(--parch);border:5px solid var(--ink);border-radius:26px;box-shadow:0 10px 0 rgba(60,35,15,.35),0 22px 34px rgba(60,35,15,.3),inset 0 0 0 5px #f2dcb0;color:var(--ink)}
+.src{position:absolute;z-index:31;background:rgba(20,26,44,.86);color:#ffe3b8;border-radius:16px;padding:10px 22px;font-size:24px;font-weight:700;line-height:1.3;border:3px solid #56668a}
+.hint{position:absolute;top:22px;left:28px;margin:0;font-size:20px;color:rgba(255,227,184,.75);direction:rtl}
+
+/* ---------- title ---------- */
+.ttl{position:absolute;top:40px;left:0;right:0;margin:0;text-align:center;line-height:1}
+.ttl .t1{display:block;font-size:150px;font-weight:700;color:var(--gold);text-shadow:0 7px 0 #7a4a12,0 0 60px rgba(255,190,70,.45)}
+.ttl .t2{display:block;font-size:96px;font-weight:700;color:var(--cream);margin-top:8px;text-shadow:0 5px 0 rgba(10,10,30,.6)}
+.sub{position:absolute;top:322px;left:0;right:0;text-align:center;margin:0;font-size:38px;font-weight:700;color:#ffe9c4;text-shadow:0 3px 0 rgba(10,10,30,.7)}
+
+/* ---------- sea world ---------- */
+.bob{animation:bob 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-1.2deg)}50%{transform:translateY(-8px) rotate(1.2deg)}}
+.wv{animation:wv 6s linear infinite}
+.wv.b{animation-duration:9s;animation-direction:reverse}
+@keyframes wv{from{transform:translateX(0)}to{transform:translateX(-200px)}}
+.flagW{animation:flag 1.4s ease-in-out infinite;transform-box:fill-box;transform-origin:0 50%}
+@keyframes flag{0%,100%{transform:skewY(0)}50%{transform:skewY(-4deg) scaleX(.96)}}
+.glow{animation:glow 2.4s ease-in-out infinite}
+@keyframes glow{0%,100%{opacity:.55}50%{opacity:.85}}
+.cloud{animation:cl 40s linear infinite}
+@keyframes cl{from{transform:translateX(0)}to{transform:translateX(-300px)}}
+.gull{animation:gull 14s linear infinite}
+@keyframes gull{from{transform:translateX(200px)}to{transform:translateX(-1900px)}}
+
+/* ---------- parrot guide ---------- */
+#polly{position:absolute;left:0;top:0;width:220px;height:300px;z-index:35;transform-origin:50% 100%;
+  transition:transform 1.2s cubic-bezier(.5,0,.2,1),opacity .6s ease;opacity:0;pointer-events:none}
+#polly.on{opacity:1}
+#polly .pb{animation:pbob 2.6s ease-in-out infinite;transform-origin:50% 100%}
+@keyframes pbob{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg) translateY(-4px)}}
+#polly .lid{animation:blink 4.5s infinite;transform-box:fill-box;transform-origin:50% 0}
+@keyframes blink{0%,92%,100%{transform:scaleY(0)}95%{transform:scaleY(1)}}
+#polly .wing{animation:flap 2.6s ease-in-out infinite;transform-box:fill-box;transform-origin:70% 15%}
+@keyframes flap{0%,80%,100%{transform:rotate(0)}86%{transform:rotate(-14deg)}92%{transform:rotate(4deg)}}
+.bub{position:absolute;z-index:36;background:#fff;border:5px solid var(--ink);border-radius:30px;padding:18px 30px 20px;font-size:36px;font-weight:700;line-height:1.25;color:var(--ink);box-shadow:0 8px 0 rgba(10,10,30,.3);text-wrap:balance}
+.bub em{font-style:normal;color:#b8361f}
+.bub::after{content:"";position:absolute;width:30px;height:30px;background:#fff;border:5px solid var(--ink);border-top:0;border-right:0;bottom:-19px;left:var(--tl,60px);transform:rotate(-45deg)}
+.bub.tr::after{left:auto;right:var(--tl,60px);transform:rotate(-45deg) scaleX(-1)}
+.bub.side::after{bottom:auto;top:40%;left:-19px;transform:rotate(45deg)}
+
+/* ---------- slide 3: articles scroll ---------- */
+.scroll{position:absolute;background:linear-gradient(90deg,#f1dfb8,#fff3d8 12%,#fff6e2 50%,#fff3d8 88%,#f1dfb8);border-left:5px solid var(--ink);border-right:5px solid var(--ink);
+  box-shadow:0 20px 40px rgba(30,15,5,.45)}
+.scroll::before,.scroll::after{content:"";position:absolute;left:-26px;right:-26px;height:46px;border:5px solid var(--ink);border-radius:23px;
+  background:linear-gradient(#e7c98e,#fff0cf 40%,#d9b475);z-index:2}
+.scroll::before{top:-30px}.scroll::after{bottom:-30px}
+#artScroll{left:150px;top:160px;width:560px;height:600px;padding:44px 50px 30px;transform:rotate(-1.5deg)}
+#artScroll h3{margin:0 0 18px;text-align:center;font-size:44px;font-weight:700;color:#6a3a16}
+.ln{height:13px;border-radius:7px;background:#e0cfa8;margin:15px 0}
+.ln.s{width:62%}.ln.m{width:82%}
+.sigs{position:absolute;left:40px;right:40px;bottom:36px;height:170px}
+.sigs svg{width:100%;height:100%}
+.sigs path{stroke-dasharray:420;stroke-dashoffset:420;transition:stroke-dashoffset 1.2s ease}
+#stage[data-slide="3"][data-step="1"] .sigs path{stroke-dashoffset:0}
+.sigs path:nth-child(2){transition-delay:.4s}.sigs path:nth-child(3){transition-delay:.8s}.sigs path:nth-child(4){transition-delay:1.1s}.sigs path:nth-child(5){transition-delay:1.4s}.sigs path:nth-child(6){transition-delay:1.7s}.sigs path:nth-child(7){transition-delay:2s}
+
+/* ---------- slide 4: true or invented ---------- */
+#tfCard{left:300px;top:250px;width:1000px;height:440px;padding:50px 60px;text-align:center}
+#tfNum{position:absolute;top:-26px;right:50px;background:#2f6b57;color:#fff;border:4px solid var(--ink);border-radius:999px;padding:4px 22px;font-size:30px;font-weight:700}
+.tfT{margin:0;font-size:66px;font-weight:700;line-height:1.2;text-wrap:balance}
+.tfStamp{position:absolute;left:80px;right:80px;bottom:30px;text-align:center!important;border-radius:20px;border:6px solid currentColor;background:#fffdf6;padding:10px 26px;font-size:34px;font-weight:700;line-height:1.25;text-align:right;
+  box-shadow:0 6px 0 rgba(10,10,30,.25)}
+.tfStamp.real{color:#1d7a46}.tfStamp.fake{color:#b8361f}
+.tfStamp b{display:block;font-size:48px}
+.legend{position:absolute;display:flex;gap:26px}
+.legend span{display:flex;align-items:center;gap:14px;background:var(--parch);border:4px solid var(--ink);border-radius:999px;padding:8px 26px 8px 18px;font-size:32px;font-weight:700}
+.legend svg{width:48px;height:48px}
+
+/* ---------- slide 5: two ships ---------- */
+.shipCard{top:200px;width:640px;height:480px;padding:22px 34px 26px;text-align:center}
+.shipCard .lbl{display:inline-block;font-size:40px;font-weight:700;color:#fff;background:var(--woodD);border:4px solid var(--ink);border-radius:14px;padding:2px 26px}
+.shipCard svg{margin:12px auto 6px;width:420px;height:230px}
+.shipCard p{margin:0;font-size:34px;font-weight:700;line-height:1.25;text-wrap:balance}
+
+/* ---------- slide 6: why ---------- */
+.why{width:600px;height:180px;padding:22px 30px;display:flex;align-items:center;gap:22px}
+.why .n{flex:none;width:76px;height:76px;border-radius:50%;background:var(--gold);border:4px solid var(--ink);display:grid;place-items:center;font-size:40px;font-weight:700}
+.why p{margin:0;font-size:36px;font-weight:700;line-height:1.22;text-wrap:balance}
+.why p span{display:block;font-size:28px;color:#8a5a2e;margin-top:4px}
+
+/* ---------- slide 7: phone ---------- */
+.phone{position:absolute;width:360px;height:680px;background:#1b1f27;border:6px solid var(--ink);border-radius:50px;box-shadow:0 24px 44px rgba(0,0,0,.5)}
+.phone .scr{position:absolute;inset:14px;border-radius:38px;background:#ece5dd;overflow:hidden;display:flex;flex-direction:column}
+.phone .top{flex:none;height:96px;background:#0b7a5e;display:flex;align-items:center;gap:14px;padding:14px 18px 0;color:#fff}
+.phone .top i{flex:none;width:50px;height:50px;border-radius:50%;background:#f6e2c0;border:3px solid #fff;display:grid;place-items:center;overflow:hidden}
+.phone .top b{display:block;font-size:24px}.phone .top small{display:block;font-size:19px;opacity:.85}
+.chat{flex:1;display:flex;flex-direction:column;gap:10px;padding:16px 14px;justify-content:flex-end}
+.rb{align-self:flex-start;max-width:250px;background:#fff;border-radius:16px;padding:8px 14px 6px;font-size:22px;font-weight:700;color:#2a2a2a;box-shadow:0 2px 0 rgba(0,0,0,.12);line-height:1.25}
+.rb .who{display:block;font-size:17px;color:#c0392b}
+.rb .meta{display:block;font-size:14px;color:#8a8a8a;text-align:left;margin-top:2px;font-weight:400}
+.rb.me{align-self:flex-end;background:#d6f5c6}
+.rb.typing{color:#0b7a5e;font-style:italic}
+#bridgeTxt{left:600px;right:90px;top:110px;padding:34px 46px 38px;display:flex;flex-direction:column;gap:18px;transform:rotate(1deg)}
+#bridgeTxt p{margin:0;font-size:46px;font-weight:700;line-height:1.22;text-wrap:balance}
+#bridgeTxt .big{font-size:52px;color:#b8361f}
+
+/* ---------- slide 8: map ---------- */
+.isl{transition:opacity .6s ease,transform .8s cubic-bezier(.34,1.5,.64,1);transform-box:fill-box;transform-origin:50% 50%}
+.isl.dim{opacity:.35}
+.isLbl{position:absolute;translate:-50% 0;background:var(--parch);border:4px solid var(--ink);border-radius:14px;padding:4px 16px;font-size:28px;font-weight:700;white-space:nowrap;box-shadow:0 5px 0 rgba(60,35,15,.3)}
+#mapPath{stroke-dasharray:14 16}
+#mapInfo{left:500px;right:60px;top:676px;height:196px;display:grid}
+#mapInfo>div{grid-area:1/1;padding:18px 30px 18px 30px}
+.mi h3{margin:0 0 6px;font-size:40px;font-weight:700;color:#7a3a12}
+.mi p{margin:0;font-size:30px;font-weight:700;line-height:1.28}
+.mi p b{color:#1d6a8a}
+.chipRow{display:flex;flex-wrap:wrap;gap:12px}
+.chipRow span{background:#fffdf6;border:3px solid var(--ink);border-radius:999px;padding:4px 16px;font-size:26px;font-weight:700;white-space:nowrap}
+
+/* ---------- slide 9: positive ---------- */
+.pairRow{position:absolute;left:150px;right:150px;height:120px;display:flex;align-items:center;gap:26px}
+.pairRow .no,.pairRow .yes{flex:1;height:120px;border:5px solid var(--ink);border-radius:24px;display:flex;align-items:center;padding:0 28px;font-size:36px;font-weight:700;line-height:1.2;text-wrap:balance}
+.pairRow .no{background:#e8e2d8;color:#6a6262;flex:.8}
+.pairRow .no s{text-decoration-thickness:4px;text-decoration-color:#b8361f}
+.pairRow .yes{background:var(--parch);color:var(--ink);box-shadow:0 8px 0 rgba(60,35,15,.3)}
+.pairRow .ar{flex:none;width:70px;height:70px}
+.colHd{position:absolute;top:196px;font-size:30px;font-weight:700;color:#ffe3b8}
+
+/* ---------- slide 10: roles ---------- */
+.role{top:250px;width:310px;height:330px;padding:24px 22px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}
+.role svg{width:110px;height:110px}
+.role h3{margin:0;font-size:36px;font-weight:700}
+.role p{margin:0;font-size:28px;font-weight:700;line-height:1.25;color:#6a4a32;text-wrap:balance}
+
+/* ---------- timers ---------- */
+.timer{position:absolute;z-index:33;display:flex;flex-direction:column;align-items:center;gap:12px}
+.timer .clock{width:330px;height:170px;border-radius:30px;background:#1b1f27;border:6px solid var(--ink);box-shadow:0 10px 0 rgba(0,0,0,.35),inset 0 0 0 5px #3a4866;
+  display:grid;place-items:center;font-size:118px;font-weight:700;color:var(--gold);direction:ltr;font-variant-numeric:tabular-nums;letter-spacing:2px}
+.timer.low .clock{color:#ff7a5a}
+.timer.done .clock{color:#7fe0a0;animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.05)}}
+.timer .tb{display:flex;gap:10px;direction:ltr}
+.timer button{min-width:64px;height:54px;border-radius:16px;border:3px solid var(--ink);background:var(--parch);font-size:24px;font-weight:700;cursor:pointer;padding:0 12px}
+.hourglass{width:110px;height:150px}
+.ideas{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+.ideas span{background:var(--parch);border:4px solid var(--ink);border-radius:999px;padding:8px 22px;font-size:31px;font-weight:700;white-space:nowrap;box-shadow:0 5px 0 rgba(60,35,15,.3)}
+
+/* ---------- slide 12: gallery ---------- */
+.stepL{display:flex;flex-direction:column;gap:18px}
+.stepL div{display:flex;align-items:center;gap:22px;font-size:36px;font-weight:700;line-height:1.22;text-wrap:balance}
+.stepL i{flex:none;width:64px;height:64px;border-radius:50%;background:var(--gold);border:4px solid var(--ink);display:grid;place-items:center;font-style:normal;font-size:34px}
+.coin{display:inline-block;width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe58a,#f2b52a 60%,#c98a12);border:4px solid var(--ink);vertical-align:middle}
+
+/* ---------- slide 13: builder ---------- */
+#bPanel{left:60px;top:40px;width:640px;height:740px;padding:28px 34px;display:flex;flex-direction:column;gap:14px}
+#bPanel h2{margin:0;font-size:54px;font-weight:700;color:#6a3a16}
+#bPanel ol{margin:0;padding:0 34px 0 0;font-size:29px;font-weight:700;line-height:1.3}
+#bPanel ol li{margin-bottom:6px}
+#bPanel ol b{color:#b8361f}
+#ruleIn{width:100%;height:120px;resize:none;border:4px solid var(--ink);border-radius:18px;padding:12px 16px;font-size:30px;font-weight:700;line-height:1.3;background:#fffdf6;color:#1d4f8a;direction:rtl}
+#ruleIn:focus{outline:4px solid var(--sky)}
+.bRow{display:flex;gap:12px;flex-wrap:wrap}
+.btn{height:60px;border-radius:16px;border:4px solid var(--ink);background:var(--gold);font-size:28px;font-weight:700;padding:0 22px;cursor:pointer;color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:#fffdf6;font-size:22px;height:50px;padding:0 16px}
+#bCount{font-size:28px;font-weight:700;color:#2f6b57}
+#bScroll{left:800px;top:60px;width:720px;height:780px;padding:40px 52px 30px;display:flex;flex-direction:column}
+#bBody{flex:1;min-height:0;overflow:hidden}
+.chHead{text-align:center;margin-bottom:10px}
+.chHead h3{margin:0;font-size:46px;font-weight:700;color:#6a3a16;line-height:1.1}
+.chHead small{display:block;font-size:24px;font-weight:700;color:#8a5a2e;margin-top:4px}
+.rules{margin:0;padding:0;list-style:none;counter-reset:r}
+.rules li{counter-increment:r;position:relative;padding:8px 66px 8px 8px;border-bottom:3px dashed #d9c49a;font-weight:700;line-height:1.22;color:var(--ink)}
+.rules li::before{content:counter(r);position:absolute;right:0;top:50%;transform:translateY(-50%);width:50px;height:50px;border-radius:50%;background:var(--pom);color:#fff;border:3px solid var(--ink);display:grid;place-items:center;font-size:28px}
+#bRules li{font-size:30px}
+#bRules li .ctl{position:absolute;left:0;top:50%;transform:translateY(-50%);display:flex;gap:6px;opacity:.0;transition:opacity .2s}
+#bRules li:hover .ctl,#bRules li:focus-within .ctl{opacity:1}
+#bRules li .ctl button{width:40px;height:40px;border-radius:10px;border:3px solid var(--ink);background:#fffdf6;font-size:20px;font-weight:700;cursor:pointer;padding:0}
+#bEmpty{font-size:30px;font-weight:700;color:#a08a6a;text-align:center;margin-top:60px;line-height:1.35}
+
+/* ---------- slide 14: charter ---------- */
+#cScroll{left:480px;top:56px;width:1060px;height:790px;padding:40px 70px 30px;display:flex;flex-direction:column}
+#cRules{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+#cRules li{padding-top:7px;padding-bottom:7px}
+#cFoot{display:flex;justify-content:space-between;align-items:flex-end;font-size:24px;font-weight:700;color:#8a5a2e;border-top:4px double #c9a86a;padding-top:10px}
+#printBtn{position:absolute;top:20px;left:24px;z-index:40}
+
+/* ---------- slide 15: signing ---------- */
+#signScroll{left:90px;top:200px;width:700px;height:560px;padding:40px 44px 20px;transform:rotate(-1.5deg)}
+#signScroll h3{margin:0 0 14px;text-align:center;font-size:40px;font-weight:700;color:#6a3a16}
+.sigGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 16px;margin-top:22px}
+.sigGrid i{height:46px;border-bottom:3px solid #b99a62;position:relative}
+.sigGrid svg{position:absolute;inset:0;width:100%;height:100%}
+.sigGrid path{stroke-dasharray:300;stroke-dashoffset:300;transition:stroke-dashoffset .9s ease}
+#stage[data-slide="15"] .sigGrid path{stroke-dashoffset:0}
+#quill{position:absolute;left:640px;top:520px;width:200px;height:200px;transform:rotate(-8deg);animation:quill 2.2s ease-in-out infinite}
+@keyframes quill{0%,100%{transform:rotate(-8deg) translate(0,0)}50%{transform:rotate(-4deg) translate(-26px,8px)}}
+#signTxt{left:870px;right:70px;top:200px;padding:30px 40px 34px}
+#signTxt p{margin:0 0 12px;font-size:38px;font-weight:700;line-height:1.25;text-wrap:balance}
+#fact{left:870px;right:70px;top:560px;padding:20px 34px 24px;background:#eaf3ff}
+#fact p{margin:0;font-size:30px;font-weight:700;line-height:1.28;text-wrap:balance}
+#fact .tag{background:#1d4f8a}
+
+/* ---------- closing ---------- */
+#endTxt{position:absolute;left:0;right:0;top:50px;text-align:center}
+#endTxt p{margin:0;font-weight:700;color:var(--cream);text-shadow:0 4px 0 rgba(10,10,30,.7),0 0 30px rgba(10,10,30,.8)}
+#endTxt .e1{font-size:60px}
+#endTxt .e2{font-size:120px;color:var(--gold);margin-top:6px;text-shadow:0 7px 0 #7a4a12,0 0 40px rgba(10,10,30,.6)}
+
+/* ---------- nav ---------- */
+#nav{position:absolute;left:26px;bottom:22px;z-index:60;display:flex;align-items:center;gap:8px;background:rgba(18,26,44,.9);padding:8px 12px;border-radius:999px;border:3px solid #3a4866}
+.nb{width:46px;height:46px;border-radius:50%;border:3px solid var(--ink);background:var(--gold);color:var(--ink);cursor:pointer;display:grid;place-items:center}
+.nb.sm{width:38px;height:38px;background:transparent;color:#ffe3b8;border-color:#56668a;font-size:20px;font-weight:700}
+.nb:disabled{opacity:.35;cursor:default}
+.nb svg{width:26px;height:26px}
+#dots{display:flex;gap:4px;padding:0 2px}
+#dots span{width:7px;height:7px;border-radius:50%;background:#3e4c6c;transition:background .3s,transform .3s}
+#dots span.cur{background:var(--gold);transform:scale(1.35)}
+button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
+
+/* ---------- presenter notes ---------- */
+#notes{position:fixed;left:12px;right:12px;bottom:12px;z-index:100;max-height:46vh;overflow:auto;background:rgba(14,20,34,.96);color:#f4ead6;border:2px solid #56668a;border-radius:16px;
+  padding:14px 22px 16px;font:18px/1.5 var(--f);direction:rtl;display:none;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+#notes.on{display:block}
+#notes h4{margin:0 0 6px;font-size:20px;color:var(--gold);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+#notes h4 span{color:#9fc4e8;font-weight:700}
+#notes p{margin:4px 0}
+#notes .k{color:#9fc4e8;font-size:15px;margin-top:8px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01s!important;transition-delay:0s!important}}
+.nofx *,.nofx *::before,.nofx *::after{transition-duration:0s!important;transition-delay:0s!important;animation-play-state:paused!important}
+
+@media print{
+  @page{size:A3 portrait;margin:12mm}
+  body{background:#fff;overflow:visible;height:auto}
+  #frame,#notes{display:none!important}
+  #printOut{display:block!important}
+}
+#printOut{display:none;font-family:var(--f);direction:rtl;color:#20182a}
+#printOut h1{text-align:center;font-size:44pt;margin:10mm 0 2mm}
+#printOut .ps{text-align:center;font-size:18pt;color:#8a5a2e;margin:0 0 8mm}
+#printOut ol{font-size:24pt;font-weight:700;line-height:1.35;padding-right:16mm;margin:0 0 10mm}
+#printOut ol li{margin-bottom:5mm}
+#printOut .sg{display:grid;grid-template-columns:repeat(5,1fr);gap:9mm 6mm}
+#printOut .sg i{display:block;height:16mm;border-bottom:1.2pt solid #8a6a3a}
+#printOut h2{font-size:20pt;text-align:center;margin:0 0 6mm}
+</style>
+</head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+ <symbol id="i-stand" viewBox="0 0 60 60"><g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><circle cx="30" cy="11" r="6" fill="#fff"/><path d="M30 19 V38 M30 38 L22 54 M30 38 L38 54 M30 25 L16 12 M30 25 L44 12"/></g></symbol>
+ <symbol id="i-sit" viewBox="0 0 60 60"><g fill="none" stroke="#20182a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="26" cy="10" r="6" fill="#20182a"/><path d="M26 18 V34 H42 V52 M26 26 L38 30 M14 30 V54 M14 40 H46 M46 30 V54"/></g></symbol>
+ <symbol id="i-up" viewBox="0 0 60 60"><g fill="none" stroke="#20182a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="30" cy="10" r="6" fill="#20182a"/><path d="M30 18 V38 M30 38 L23 55 M30 38 L37 55 M30 24 L18 8 M30 24 L42 8"/></g></symbol>
+ <symbol id="i-walk" viewBox="0 0 60 60"><g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><circle cx="32" cy="10" r="6" fill="#fff"/><path d="M31 18 L27 36 L18 54 M27 36 L38 44 L40 55 M30 23 L19 30 M30 23 L42 30"/></g></symbol>
+ <symbol id="i-talk" viewBox="0 0 60 60"><g stroke="#fff" stroke-width="4" stroke-linejoin="round"><path d="M6 10 H36 V30 H18 L10 37 V30 H6Z" fill="none"/><path d="M24 26 H54 V46 H50 V53 L42 46 H24Z" fill="#fff"/></g></symbol>
+ <symbol id="i-think" viewBox="0 0 60 60"><g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M30 6 C18 6 12 15 12 23 C12 31 19 35 21 42 H39 C41 35 48 31 48 23 C48 15 42 6 30 6Z"/><path d="M22 49 H38 M25 55 H35"/></g></symbol>
+ <symbol id="i-hand" viewBox="0 0 60 60"><path d="M20 56 C14 48 10 40 10 33 C10 29 15 29 17 33 L20 38 V12 C20 8 26 8 26 12 V30 V8 C26 4 32 4 32 8 V30 V10 C32 6 38 6 38 10 V31 V16 C38 12 44 12 44 16 V38 C44 48 40 52 36 56Z" fill="#fff" stroke="#20182a" stroke-width="2.5" stroke-linejoin="round"/></symbol>
+ <symbol id="i-wheel" viewBox="0 0 60 60"><g fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"><circle cx="30" cy="30" r="15"/><circle cx="30" cy="30" r="4" fill="#fff"/><path d="M30 4 V56 M4 30 H56 M12 12 L48 48 M48 12 L12 48"/></g></symbol>
+ <symbol id="i-pen" viewBox="0 0 60 60"><g fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M50 6 C34 10 22 24 16 42 L22 44 C30 30 40 20 50 6Z" fill="#fff"/><path d="M16 42 L10 54 M8 56 H40"/></g></symbol>
+ <symbol id="i-clap" viewBox="0 0 60 60"><g fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 50 V22 M16 22 L10 12 M16 22 L22 12 M44 50 V22 M44 22 L38 12 M44 22 L50 12"/><path d="M4 30 L8 34 M56 30 L52 34 M26 8 L30 4 L34 8"/></g></symbol>
+ <symbol id="i-arrow" viewBox="0 0 70 70"><circle cx="35" cy="35" r="31" fill="#ffc24a" stroke="#20182a" stroke-width="4"/><path d="M48 35 H22 M32 24 L21 35 L32 46" fill="none" stroke="#20182a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+ <symbol id="pom" viewBox="0 0 100 100"><path d="M40 20 L36 8 L44 14 L50 4 L56 14 L64 8 L60 20Z" fill="#7a2a1e" stroke="#20182a" stroke-width="3.5" stroke-linejoin="round"/><circle cx="50" cy="57" r="36" fill="#c8323a" stroke="#20182a" stroke-width="4"/><path d="M32 42 Q36 34 44 32" fill="none" stroke="#ff9d8a" stroke-width="6" stroke-linecap="round"/><path d="M46 70 l4 -6 l4 6 M58 62 l4 -6 l4 6 M36 62 l4 -6 l4 6" fill="none" stroke="#7a1a22" stroke-width="3" stroke-linecap="round" opacity=".55"/></symbol>
+</defs></svg>
+
+<div id="frame"><div id="fit">
+<div id="stage" data-slide="0" data-step="0">
+
+  <!-- SEA WORLD: title, hook, closing -->
+  <section class="layer" id="L-sea" data-on="0,1,16">
+    <div class="cam" id="seaCam"><svg class="fill" id="seaSvg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="ספינת מפרשים שטה בים בשקיעה"></svg></div>
+    <div class="fill" id="seaShade" style="background:linear-gradient(to bottom,rgba(16,24,48,.55),rgba(16,24,48,.1) 40%,rgba(16,24,48,0) 55%);transition:opacity 1s"></div>
+    <h1 class="ttl w" data-when="0"><span class="t1">כולם</span><span class="t2">על הסיפון!</span></h1>
+    <p class="sub w" data-when="0" style="--d:.6s">קוד הפיראטים, והאמנה של ה׳ רימון</p>
+    <p class="hint w" data-when="0@0">למציג/ה: רווח או חצים להתקדם · N הערות · P חלון מציג · F מסך מלא</p>
+    <div class="act w bx" data-when="0@1" style="right:56px;width:560px;top:600px"><span class="ic"><svg><use href="#i-stand"/></svg></span><div><small>כולם קמים</small>מתנדנדים עם הגלים: ימינה… שמאלה… ושוב!</div></div>
+
+    <div class="cap w bx" data-when="1"><span class="tag">לפני כ־300 שנה · הים הקריבי</span><h2>ספינה יוצאת להפלגה ארוכה.</h2><p>חודשים בים. עשרות מלחים. ספינה אחת.</p></div>
+    <div class="act think w bx" data-when="1@1" style="right:56px;width:820px;top:560px"><span class="ic"><svg><use href="#i-think"/></svg></span><div><small>קחו דקה לחשוב, וספרו לחבר/ה שלידכם</small>מה יכול להשתבש כשהרבה אנשים חיים יחד על ספינה אחת?</div></div>
+
+    <div id="endTxt" class="w bx" data-when="16"><p class="e1">הספינה שלנו מוכנה להפליג.</p><p class="e2">כולם על הסיפון!</p></div>
+    <div class="act w bx" data-when="16@1" style="right:56px;width:560px;top:560px"><span class="ic"><svg><use href="#i-stand"/></svg></span><div><small>קמים, ובקול אחד</small>״כולם על הסיפון!״ והאמנה נתלית בכיתה.</div></div>
+  </section>
+
+  <!-- DECK WORLD -->
+  <section class="layer" id="L-deck" data-on="2,4,5,6,9,10,11,12">
+    <div class="cam" id="deckCam"><svg class="fill" id="deckSvg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="סיפון של ספינה עם חביות, חבלים ופנס"></svg></div>
+    <div class="fill" id="deckShade" style="background:rgba(18,22,40,.0);transition:background .8s"></div>
+
+    <!-- slide 2: Polly -->
+    <div class="bub side w bx" data-when="2" style="right:120px;top:90px;width:820px"><span style="font-size:48px">אהוי! אני <em>פולי</em>, התוכי של הספינה.</span><br>הפיראטים היו שודדי ים. הם לקחו דברים שלא שלהם, וזה ממש לא בסדר.</div>
+    <div class="card w bx" data-when="2@1" style="right:120px;top:450px;width:820px;padding:26px 40px"><p style="margin:0;font-size:46px;font-weight:700;line-height:1.2">אבל דבר אחד הם עשו <span style="color:#b8361f">חכם מאוד</span>.</p></div>
+    <div class="act w bx" data-when="2@1" style="right:120px;top:620px;width:820px;--d:.8s"><span class="ic"><svg><use href="#i-hand"/></svg></span><div><small>מי רוצה לנחש?</small>מרימים יד ישר למעלה, כמו תורן!</div></div>
+
+    <!-- slide 4: true / invented -->
+    <h2 class="hd w bx" data-when="4" style="top:40px;left:200px;right:200px;font-size:84px">אמת או <em>המצאה?</em><span class="sh">חוקים אמיתיים מהספינה של הקפטן רוברטס, ואחד שהמצאנו</span></h2>
+    <div class="legend w bx" data-when="4" style="left:520px;right:300px;bottom:44px;justify-content:center"><span><svg><use href="#i-up"/></svg>אמיתי? קמים!</span><span><svg><use href="#i-sit"/></svg>המצאה? יושבים</span></div>
+    <div class="card w bx" id="tfCard" data-when="4@1+"><span id="tfNum" data-out>קלף 1 מתוך 6</span><p class="tfT" id="tfT"></p><div class="tfStamp" id="tfStamp" data-out></div></div>
+
+    <!-- slide 5: two ships -->
+    <h2 class="hd w bx" data-when="5" style="top:44px;left:120px;right:120px;font-size:68px">על איזו ספינה הייתם רוצים <em>להפליג?</em></h2>
+    <div class="card shipCard w bx" data-when="5" style="right:120px"><span class="lbl">ספינה א</span><svg id="shipA" viewBox="0 0 420 230"></svg><p>הקפטן כותב את כל החוקים לבד,<br>ותולה אותם על התורן.</p></div>
+    <div class="card shipCard w bx" data-when="5" style="left:120px;--d:.6s"><span class="lbl" style="background:var(--pom)">ספינה ב</span><svg id="shipB" viewBox="0 0 420 230"></svg><p>כל הצוות כותב את החוקים יחד,<br>וכל אחד חותם.</p></div>
+    <div class="act w bx" data-when="5@1" style="left:520px;right:120px;top:712px"><span class="ic"><svg><use href="#i-walk"/></svg></span><div><small>קמים והולכים</small>לשלט של הספינה שבחרתם. ספרו לנו: <b>למה?</b></div></div>
+
+    <!-- slide 6: why -->
+    <h2 class="hd w bx" data-when="6" style="top:40px;left:120px;right:120px;font-size:62px">למה חוקים שאנחנו כותבים <em>בעצמנו</em> עובדים טוב יותר?</h2>
+    <div class="act think w bx" data-when="6@0" style="left:400px;right:400px;top:330px"><span class="ic"><svg><use href="#i-think"/></svg></span><div><small>קחו דקה לחשוב…</small>ואז נגלה ארבע סיבות.</div></div>
+    <div class="card why w bx" data-when="6@1+" style="right:180px;top:230px"><span class="n">1</span><p>אנחנו מבינים אותם<span>כי כתבנו אותם במילים שלנו</span></p></div>
+    <div class="card why w bx" data-when="6@2+" style="left:180px;top:230px"><span class="n">2</span><p>הם מתאימים לנו<span>לספינה שלנו, לא לספינה של מישהו אחר</span></p></div>
+    <div class="card why w bx" data-when="6@3+" style="right:180px;top:450px"><span class="n">3</span><p>כולם הסכימו<span>אז כולם שומרים עליהם</span></p></div>
+    <div class="card why w bx" data-when="6@4+" style="left:180px;top:450px"><span class="n">4</span><p>קל להזכיר בחיוך<span>״היי, זה החוק שלנו!״</span></p></div>
+    <div class="src w bx" data-when="6@4+" style="left:500px;right:180px;top:656px;--d:.9s;font-size:27px">ספר משנת 1724 מספר על צוות פיראטים אחר, שכתב סעיפים ״כדי למנוע ויכוחים ומריבות אחר כך״.</div>
+    <div class="act w bx" data-when="6@1+" style="left:500px;right:180px;top:772px;padding:10px 26px;font-size:30px"><span class="ic" style="width:60px;height:60px"><svg style="width:42px;height:42px"><use href="#i-clap"/></svg></span><div>מסכימים? <b>מחיאות כפיים שקטות</b>: מנופפים בידיים למעלה!</div></div>
+
+    <!-- slide 9: positive -->
+    <h2 class="hd w bx" data-when="9" style="top:36px;left:120px;right:120px;font-size:72px">הקסם: הופכים <em>״אסור״</em> ל<em>״כן״</em><span class="sh">חוק טוב אומר מה <u>כן</u> עושים</span></h2>
+    <div class="pairRow w bx" data-when="9@1+" style="top:250px"><div class="no"><s>אסור לחפור בקבוצה</s></div><svg class="ar"><use href="#i-arrow"/></svg><div class="yes">כותבים קצר: הודעה אחת במקום עשר</div></div>
+    <div class="pairRow w bx" data-when="9@2+" style="top:395px"><div class="no"><s>אסור להעביר תמונות של אחרים</s></div><svg class="ar"><use href="#i-arrow"/></svg><div class="yes">שואלים לפני ששולחים תמונה של מישהו</div></div>
+    <div class="pairRow w bx" data-when="9@3+" style="top:540px"><div class="no"><s>אסור לכתוב בלילה</s></div><svg class="ar"><use href="#i-arrow"/></svg><div class="yes">אחרי 21:00 הספינה ישנה 🌙</div></div>
+    <div class="act w bx" data-when="9@4" style="left:500px;right:150px;top:700px"><span class="ic"><svg><use href="#i-stand"/></svg></span><div><small>תורכם! מי שיש לו ״כן״, קם</small><s style="color:#7a6a6a">אסור לצחוק על מישהו בקבוצה</s> ← ?</div></div>
+
+    <!-- slide 10: crews -->
+    <h2 class="hd w bx" data-when="10" style="top:40px;left:120px;right:120px;font-size:76px">מתחלקים <em>לצוותים</em><span class="sh">7 צוותים · 4 מלחים בכל צוות · לכל אחד תפקיד</span></h2>
+    <div class="card role w bx" data-when="10" style="right:110px;--d:.3s"><svg id="r1" viewBox="0 0 110 110"></svg><h3>נווט/ת</h3><p>מקריא/ה את השאלות שבדף</p></div>
+    <div class="card role w bx" data-when="10" style="right:465px;--d:.5s"><svg id="r2" viewBox="0 0 110 110"></svg><h3>סופר/ת</h3><p>כותב/ת את החוקים על הדף</p></div>
+    <div class="card role w bx" data-when="10" style="right:820px;--d:.7s"><svg id="r3" viewBox="0 0 110 110"></svg><h3>שומר/ת זמן</h3><p>מזכיר/ה לצוות כמה זמן נשאר</p></div>
+    <div class="card role w bx" data-when="10" style="right:1175px;--d:.9s"><svg id="r4" viewBox="0 0 110 110"></svg><h3>אחראי/ת תורות</h3><p>דואג/ת שכל אחד יגיד את שלו</p></div>
+    <div class="act w bx" data-when="10@1" style="left:500px;right:110px;top:628px"><span class="ic"><svg><use href="#i-walk"/></svg></span><div><small>המשימה: 3 חוקים לספינה שלנו, בלשון ״כן״</small>קמים ועוברים לשולחן הצוות, בשקט של פיראטים 🤫</div></div>
+
+    <!-- slide 11: writing timer -->
+    <h2 class="hd w bx" data-when="11" style="top:40px;right:230px;width:900px;text-align:right;font-size:72px">הצוותים <em>כותבים</em><span class="sh">3 חוקים בדף הצוות, ואת 2 הטובים מעתיקים לכרטיסי החוק</span></h2>
+    <div class="timer w bx" id="t11" data-when="11" data-min="8" style="left:110px;top:44px"><div class="clock">8:00</div><div class="tb"><button data-t="toggle">⏯</button><button data-t="plus">+1</button><button data-t="reset">↺</button></div></div>
+    <div class="card w bx" data-when="11" style="left:110px;right:110px;top:330px;padding:26px 34px 30px;--d:.6s"><p style="margin:0 0 18px;font-size:34px;font-weight:700;color:#8a5a2e;text-align:center">תקועים? בחרו נושא:</p>
+      <div class="ideas"><span>מתי כותבים?</span><span>כמה הודעות?</span><span>תמונות של אחרים</span><span>כשמישהו לא עונה</span><span>כשהשיחה מסתבכת</span><span>כשנפגשים</span><span>כשמישהו נעלב</span><span>מדבקות והקלטות</span><span>שעות שקטות</span><span>הודעה שמשמחת</span></div></div>
+    <div class="act w bx" data-when="11" style="left:500px;right:110px;top:700px;--d:1s"><span class="ic"><svg><use href="#i-pen"/></svg></span><div>כל אחד בצוות מציע. כולם מסכימים? <b>כותבים!</b></div></div>
+
+    <!-- slide 12: harbour market -->
+    <h2 class="hd w bx" data-when="12" style="top:40px;right:230px;width:900px;text-align:right;font-size:72px">שוק הנמל: <em>מסיירים ומצביעים</em></h2>
+    <div class="card w bx" data-when="12" style="right:110px;top:226px;width:900px;padding:30px 40px;--d:.4s"><div class="stepL">
+      <div><i>1</i>תולים את כרטיסי החוק על הקיר.</div>
+      <div><i>2</i>כל מלח מקבל 3 מטבעות זהב <span class="coin"></span><span class="coin"></span><span class="coin"></span></div>
+      <div><i>3</i>מסתובבים, קוראים, ומדביקים מטבע על החוקים שהכי חשובים לכם.</div>
+      <div><i>4</i>מטבע אחד לכל חוק. מותר גם לחוקים של צוותים אחרים!</div></div></div>
+    <div class="timer w bx" id="t12" data-when="12@1" data-min="5" style="left:110px;top:226px"><div class="clock">5:00</div><div class="tb"><button data-t="toggle">⏯</button><button data-t="plus">+1</button><button data-t="reset">↺</button></div></div>
+    <div class="act w bx" data-when="12@1" style="left:110px;width:380px;top:500px;font-size:31px;padding:14px 20px"><span class="ic" style="width:64px;height:64px"><svg style="width:44px;height:44px"><use href="#i-walk"/></svg></span><div>מסתובבים בשקט, ובלי לדחוף</div></div>
+  </section>
+
+  <!-- CABIN: articles -->
+  <section class="layer" id="L-cabin" data-on="3">
+    <div class="cam" id="cabCam"><svg class="fill" id="cabSvg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="תא הקפטן עם פנס דולק וחלון עגול לים"></svg></div>
+    <div class="scroll bx" id="artScroll"><h3>סעיפי הספינה</h3><div class="ln"></div><div class="ln m"></div><div class="ln"></div><div class="ln s"></div><div class="ln m"></div><div class="ln s"></div>
+      <div class="sigs"><svg viewBox="0 0 480 170" fill="none" stroke="#2a3a6a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 40 c10 -20 20 20 30 0 s20 -16 30 4 c8 10 20 -10 36 -2"/>
+        <path d="M190 30 l24 24 M214 30 l-24 24"/>
+        <path d="M300 44 c6 -26 20 -26 22 0 c2 20 16 -20 30 -4 c10 10 22 -6 40 -6"/>
+        <path d="M30 110 c14 -24 24 10 36 -6 c10 -12 16 16 30 2 s24 -6 34 0"/>
+        <path d="M200 100 c4 -20 22 -14 18 4 c-4 16 18 10 30 -6 c6 -8 14 8 26 4"/>
+        <path d="M330 96 l22 24 M352 96 l-22 24"/>
+        <path d="M400 112 c8 -18 18 6 28 -8 s16 10 30 0"/></svg></div></div>
+    <div class="cap w bx" data-when="3@0" style="right:56px;width:780px"><span class="tag">לפני שהרימו עוגן</span><h2>הצוות כתב יחד רשימה של חוקים לספינה.</h2><p>הם קראו לה ״הסעיפים״.</p></div>
+    <div class="cap w bx" data-when="3@1" style="right:56px;width:780px"><span class="tag">ואז…</span><h2>כל אחד מהצוות חתם עליה, והבטיח לשמור.</h2><p>חתימה אומרת: ״אני מסכים, ואני שומר.״</p></div>
+    <div class="src w bx" data-when="3" style="right:56px;width:780px;top:640px;--d:1s">כך מספר ספר משנת 1724 על הצוות של הקפטן ברתולומיאו רוברטס: הם כתבו סעיפים ״כדי לשמור על החבורה ולעשות צדק זה עם זה״, וחתמו עליהם.</div>
+  </section>
+
+  <!-- BRIDGE: our ship -->
+  <section class="layer" id="L-bridge" data-on="7">
+    <svg class="fill" id="bridgeSvg" viewBox="0 0 1600 900" width="1600" height="900" aria-hidden="true"></svg>
+    <div class="phone bx" style="left:150px;top:110px;transform:rotate(-3deg)"><div class="scr">
+      <div class="top"><i><svg viewBox="0 0 100 100" width="40" height="40"><use href="#pom"/></svg></i><div><b>ה׳ רימון הנדירים 😎</b><small id="typing">28 משתתפים</small></div></div>
+      <div class="chat">
+        <div class="rb"><span class="who">נועם</span>מי בא מחר למגרש? ⚽<span class="meta">16:40</span></div>
+        <div class="rb me">אני! 🙋<span class="meta">16:41 ✓✓</span></div>
+        <div class="rb"><span class="who" style="color:#7a4fb0">מאיה</span>🎉🎉🎉<span class="meta">16:41</span></div>
+        <div class="rb"><span class="who" style="color:#1f7f7a">יואב</span>מה היה בשיעורי הבית בחשבון?<span class="meta">16:43</span></div>
+        <div class="rb typing">מישהו מקליד/ה…</div>
+      </div></div></div>
+    <div class="card bx" id="bridgeTxt"><p>גם אנחנו ספינה.</p><p>28 מלחים, ספינה אחת: <span style="color:var(--pom)">ה׳ רימון</span>.</p><p>ואנחנו מפליגים יחד כל יום, גם בקבוצת הוואטסאפ.</p>
+      <p class="big w" data-when="7@1">ספינה מפליגה הכי טוב כשכולם מסכימים על החוקים.</p></div>
+    <div class="act w bx" data-when="7@1" style="left:600px;right:90px;top:740px;--d:.8s;padding:12px 26px"><span class="ic" style="width:66px;height:66px"><svg style="width:46px;height:46px"><use href="#i-wheel"/></svg></span><div>כולם תופסים הגה דמיוני, ומסובבים יחד!</div></div>
+  </section>
+
+  <!-- MAP -->
+  <section class="layer" id="L-map" data-on="8">
+    <svg class="fill" id="mapSvg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="מפת אוצר עם ארבעה איים ותיבת אוצר"></svg>
+    <h2 class="hd bx" style="top:40px;right:70px;width:760px;text-align:right;font-size:68px;color:#5a2e10;text-shadow:0 3px 0 rgba(255,240,200,.8)">המפה של <em style="color:#b8361f">המסע שלנו</em><span class="sh" style="color:#7a4a22;text-shadow:none">לאן כבר הפלגנו?</span></h2>
+    <div class="isLbl w bx" data-when="8@1+" style="left:1330px;top:624px">האי של הקרסים</div>
+    <div class="isLbl w bx" data-when="8@2+" style="left:990px;top:482px">אי האמצע</div>
+    <div class="isLbl w bx" data-when="8@3+" style="left:660px;top:626px">אי ה״לא״</div>
+    <div class="isLbl w bx" data-when="8@4+" style="left:340px;top:470px">אי ארבעת החוקים</div>
+    <div class="isLbl w bx" data-when="8@5" style="left:250px;top:700px;background:var(--gold)">האוצר!</div>
+    <div class="card bx" id="mapInfo">
+      <div class="mi w" data-when="8@0"><h3>ארבעה מפגשים, ארבעה איים.</h3><p>בכל אי מצאנו משהו חשוב. בואו נזכור: לכל אי יש <b>תנועה</b>!</p></div>
+      <div class="mi w" data-when="8@1"><h3>הטלפון נותן, וגם לוקח.</h3><p>וי כחול ✓✓ = <b>שתי אצבעות למעלה</b> · התראה 🔔 = <b>״דינג!״ וקפיצה</b> · ״מקליד…״ = <b>מתופפים על השולחן</b></p></div>
+      <div class="mi w" data-when="8@2"><h3>זהבה בוחרת את האמצע.</h3><p>לא יותר מדי, לא פחות מדי. ידיים <b>רחוק</b>… <b>קרוב</b>… ו<b>בדיוק באמצע</b>!</p></div>
+      <div class="mi w" data-when="8@3"><h3>רוזה אומרת לא.</h3><p>גם לנו מותר להגיד לא. שתי ידיים בצורת <b>X</b> ובקול: ״לא, תודה!״</p></div>
+      <div class="mi w" data-when="8@4"><div class="chipRow" style="margin-bottom:10px"><span>🍿 חוק הפופקורן</span><span>©️ זכויות יוצרים לקבוצה</span><span>🎒 טלפון בתיק כשנפגשים</span><span>😴 יום בלי וואטסאפ</span></div><p>ארבעה חוקים מהעולם. <b>קפיצת פופקורן</b> לכל חוק שזוכרים!</p></div>
+      <div class="mi w" data-when="8@5"><h3>ועכשיו… האוצר.</h3><p>החוקים ש<b>אתם</b> תכתבו, לספינה של ה׳ רימון.</p></div>
+    </div>
+  </section>
+
+  <!-- BUILDER -->
+  <section class="layer" id="L-build" data-on="13,14,15">
+    <svg class="fill" id="tableSvg" viewBox="0 0 1600 900" width="1600" height="900" aria-hidden="true"></svg>
+    <div class="card bx w" id="bPanel" data-when="13"><h2>בונים את האמנה</h2>
+      <ol><li>כל צוות מקריא את החוק עם <b>הכי הרבה מטבעות</b>.</li><li>״כולם על הסיפון?״ מי שמסכים, <b>קם</b>.</li><li>רוב קמים? החוק נכנס, והסופרים מעתיקים אותו למגילה הגדולה.</li></ol>
+      <textarea id="ruleIn" placeholder="כאן המציג/ה מקליד/ה את החוק…" aria-label="חוק חדש לאמנה"></textarea>
+      <div class="bRow"><button class="btn" id="addRule" type="button">הוספה למגילה</button><span id="bCount" style="align-self:center"></span></div>
+      <div class="bRow"><button class="btn ghost" id="sampleRules" type="button">דוגמה לתרגול</button><button class="btn ghost" id="clearRules" type="button">ניקוי</button></div>
+    </div>
+    <div class="scroll bx w" id="bScroll" data-when="13"><div class="chHead"><h3>האמנה של ספינת ה׳ רימון</h3><small>5 עד 8 חוקים, במילים שלנו</small></div>
+      <div id="bBody"><ol class="rules" id="bRules"></ol><p id="bEmpty">החוקים שתבחרו<br>יופיעו כאן ✍️</p></div></div>
+
+    <div class="scroll bx w" id="cScroll" data-when="14"><div class="chHead"><h3 style="font-size:56px;display:flex;align-items:center;justify-content:center;gap:18px"><svg viewBox="0 0 100 100" width="60" height="60"><use href="#pom"/></svg>האמנה של ספינת ה׳ רימון<svg viewBox="0 0 100 100" width="60" height="60"><use href="#pom"/></svg></h3><small>כתבנו יחד · הסכמנו יחד · שומרים יחד</small></div>
+      <div id="cRules"><ol class="rules" id="cList"></ol></div>
+      <div id="cFoot"><span>אשכולות, בנימינה</span><span>ינואר 2027</span></div></div>
+    <button class="btn ghost w" id="printBtn" data-when="14" type="button">🖨 הדפסת האמנה (A3)</button>
+    <div class="act w bx" data-when="14" style="left:40px;width:410px;top:110px;flex-direction:column;text-align:center;padding:20px 18px;font-size:34px;--d:1.2s"><span class="ic"><svg><use href="#i-talk"/></svg></span><div><small>קוראים יחד בקול</small>כל צוות מקריא חוק אחד</div></div>
+
+    <h2 class="hd w bx" data-when="15" style="top:40px;left:90px;right:70px;font-size:80px">טקס <em>החתימה</em></h2>
+    <div class="scroll bx w" id="signScroll" data-when="15"><h3>האמנה של ספינת ה׳ רימון</h3><div class="ln"></div><div class="ln m"></div><div class="ln s"></div>
+      <div class="sigGrid" id="sigGrid"></div></div>
+    <svg id="quill" class="w" data-when="15" viewBox="0 0 200 200" aria-hidden="true"></svg>
+    <div class="card w bx" id="signTxt" data-when="15" style="--d:.5s"><p>כל מלח ומלחה חותמים על האמנה.</p><p style="color:#2f6b57;margin:0">צוות אחרי צוות: ניגשים, קוראים שוב את החוקים, וחותמים.</p></div>
+    <div class="card w bx" id="fact" data-when="15@1"><span class="tag">ידעתם?</span><p>בשנת 1762 חתמו 200 אנשי הצוות של הספינה הבריטית ״אמבוסקייד״ על הסכם אחד. מי שלא ידע לכתוב, סימן סימן.</p></div>
+  </section>
+
+  <div id="polly" aria-hidden="true"><div class="pb"><svg id="pollySvg" viewBox="0 0 220 300" width="220" height="300"></svg></div></div>
+  
+  <div class="bub w bx" data-when="4@1+" style="right:50px;top:330px;width:230px;font-size:30px;padding:12px 18px;--tl:150px" id="tfBub">מה אתם אומרים?</div>
+
+  <nav id="nav" aria-label="ניווט במצגת">
+    <button class="nb" id="prevBtn" type="button" aria-label="שקף קודם"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+    <div id="dots"></div>
+    <button class="nb" id="nextBtn" type="button" aria-label="שקף הבא"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button class="nb sm" id="notesBtn" type="button" aria-label="הערות למציג">N</button>
+    <button class="nb sm" id="fsBtn" type="button" aria-label="מסך מלא"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  </nav>
+</div>
+</div></div>
+<aside id="notes" aria-live="polite"></aside>
+<div id="printOut"></div>
+<script>
+(function(){
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const INK='#20182a';
+const ol=(w)=>`stroke="${INK}" stroke-width="${w||3.5}" stroke-linejoin="round" stroke-linecap="round"`;
+const rng=seed=>{let s=seed;return()=>{s=(s*9301+49297)%233280;return s/233280}};
+const POM=(x,y,sz)=>`<use href="#pom" x="${x-sz/2}" y="${y-sz/2}" width="${sz}" height="${sz}"/>`;
+
+/* ================= ship ================= */
+function sail(mx,top,bot,w){return `<path d="M${mx-w/2} ${top} Q${mx} ${top+16} ${mx+w/2} ${top} L${mx+w/2+10} ${bot} Q${mx} ${bot+28} ${mx-w/2-10} ${bot}Z" fill="#fff4de" ${ol(4)}/>
+  <path d="M${mx-w/6} ${top+8} L${mx-w/6-4} ${bot+16} M${mx+w/6} ${top+8} L${mx+w/6+4} ${bot+16}" stroke="#e6d2a8" stroke-width="4"/>`}
+function ship(o){o=o||{};let s=`<g>`;
+  // bowsprit + ropes
+  s+=`<path d="M-300 -110 L-440 -170" ${ol(9)}/><path d="M-300 -110 L-440 -170" stroke="#7a4a24" stroke-width="5" stroke-linecap="round"/>`;
+  s+=`<path d="M-440 -170 L-70 -540 M-70 -540 L300 -150 M150 -460 L320 -140" stroke="#5a3a20" stroke-width="3" fill="none"/>`;
+  // masts
+  s+=`<rect x="-80" y="-560" width="20" height="500" rx="6" fill="#7a4a24" ${ol(3.5)}/><rect x="140" y="-470" width="18" height="410" rx="6" fill="#7a4a24" ${ol(3.5)}/>`;
+  s+=sail(-70,-520,-390,230)+sail(-70,-370,-170,300)+sail(149,-440,-330,190)+sail(149,-315,-160,240);
+  // crow's nest
+  s+=`<rect x="-104" y="-560" width="68" height="22" rx="6" fill="#8a5a32" ${ol(3)}/>`;
+  // flags
+  s+=`<g id="${o.id||''}flagPom" class="flagW" style="${o.old?'display:none':''}"><path d="M-62 -620 Q-20 -634 20 -618 Q60 -602 100 -616 L100 -540 Q60 -526 20 -542 Q-20 -558 -62 -544Z" fill="#fff4de" ${ol(3.5)}/>${POM(20,-580,56)}</g>`;
+  s+=`<g id="${o.id||''}flagOld" class="flagW" style="${o.old?'':'display:none'}"><path d="M-62 -620 Q-20 -634 20 -618 Q60 -602 100 -616 L100 -540 Q60 -526 20 -542 Q-20 -558 -62 -544Z" fill="#2a2a3a" ${ol(3.5)}/><path d="M0 -598 L40 -560 M40 -598 L0 -560" stroke="#fff4de" stroke-width="7" stroke-linecap="round"/></g>`;
+  s+=`<path d="M-70 -560 V-620" ${ol(4)}/>`;
+  // hull
+  s+=`<path d="M-330 -112 Q-300 -86 -250 -76 L230 -76 L232 -142 L330 -142 Q338 -100 322 -60 Q296 40 214 62 L-176 62 Q-276 36 -330 -112Z" fill="#8a5a32" ${ol(5)}/>`;
+  s+=`<path d="M-300 -40 Q0 -30 314 -44" fill="none" stroke="#e9b43c" stroke-width="14"/><path d="M-300 -40 Q0 -30 314 -44" fill="none" ${ol(2.5)}/>`;
+  s+=`<path d="M-250 -76 H230" ${ol(4)}/><path d="M-246 -90 H226" stroke="#6a4020" stroke-width="10"/>`;
+  for(let i=0;i<6;i++)s+=`<circle cx="${-200+i*80}" cy="6" r="13" fill="#3a2a1e" ${ol(3)}/>`;
+  s+=`<rect x="248" y="-128" width="56" height="40" rx="8" fill="#ffd77a" ${ol(3)}/><path d="M276 -128 V-88" ${ol(2.5)}/>`;
+  s+=`<circle cx="330" cy="-170" r="12" fill="#ffe7a0" ${ol(3)}/><circle cx="330" cy="-170" r="42" fill="#ffe7a0" opacity=".25" class="glow"/>`;
+  if(o.crew){const C=['#f2cfb0','#8a5636','#c98a62','#f4d2b0','#6b4228'];C.forEach((c,i)=>{const x=-200+i*90;s+=`<circle cx="${x}" cy="-104" r="15" fill="${c}" ${ol(3)}/><path d="M${x-14} -88 h28" stroke="${['#c8323a','#2f6b57','#1d4f8a','#e9b43c','#7a4fb0'][i]}" stroke-width="12" stroke-linecap="round"/>`})}
+  return s+`</g>`}
+
+/* ================= sea ================= */
+function waves(y,c,amp,cls,op){let d=`M-100 ${y}`;for(let x=-100;x<1900;x+=100)d+=` q25 ${-amp} 50 0 t50 0`;
+  return `<g class="${cls}"><path d="${d} V1000 H-100Z" fill="${c}" opacity="${op||1}"/><path d="${d}" fill="none" stroke="#fff4de" stroke-width="3" opacity=".35"/></g>`}
+function sea(){const r=rng(7);
+  let s=`<defs><linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22305a"/><stop offset=".42" stop-color="#7a5a8a"/><stop offset=".66" stop-color="#f29a5a"/><stop offset=".8" stop-color="#ffd38a"/></linearGradient>
+  <linearGradient id="seaG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a7f96"/><stop offset="1" stop-color="#14394f"/></linearGradient>
+  <radialGradient id="sunG"><stop offset="0" stop-color="#fff3c4"/><stop offset=".5" stop-color="#ffd27a" stop-opacity=".5"/><stop offset="1" stop-color="#ffb05a" stop-opacity="0"/></radialGradient></defs>
+  <rect width="1600" height="900" fill="url(#skyG)"/>`;
+  for(let i=0;i<40;i++)s+=`<circle cx="${(r()*1600).toFixed(0)}" cy="${(r()*240).toFixed(0)}" r="${(1+r()*1.6).toFixed(1)}" fill="#fff4d0" opacity="${(.4+r()*.5).toFixed(2)}"/>`;
+  s+=`<circle cx="1150" cy="560" r="260" fill="url(#sunG)"/><circle cx="1150" cy="560" r="92" fill="#ffe7a8" stroke="#f5b35a" stroke-width="4"/>`;
+  s+=`<g class="cloud">`;[[180,200,1],[1320,240,1.1],[1750,170,.9]].forEach(([x,y,k])=>{s+=`<g transform="translate(${x} ${y}) scale(${k})" opacity=".85"><path d="M-110 30 Q-120 -6 -80 -10 Q-70 -50 -20 -40 Q10 -70 50 -40 Q100 -50 104 -6 Q130 6 116 30Z" fill="#ffd9b8" ${ol(3)}/></g>`});s+=`</g>`;
+  s+=`<path d="M0 560 Q60 520 120 540 Q170 500 240 530 Q300 515 340 560Z" fill="#4a5a6a" ${ol(3)}/><path d="M200 528 Q206 480 196 452" fill="none" ${ol(5)}/><path d="M196 452 q-30 -4 -46 14 M196 452 q30 -8 44 10 M196 452 q-8 -26 -30 -30 M196 452 q14 -24 36 -22" fill="none" stroke="#3a5a3a" stroke-width="8" stroke-linecap="round"/>`;
+  s+=`<g class="gull"><path d="M1500 300 q12 -12 24 0 q12 -12 24 0" fill="none" ${ol(3)}/><path d="M1600 260 q10 -10 20 0 q10 -10 20 0" fill="none" ${ol(3)}/></g>`;
+  s+=`<rect y="560" width="1600" height="340" fill="url(#seaG)"/><path d="M0 560 H1600" ${ol(3)}/>`;
+  for(let i=0;i<7;i++)s+=`<ellipse cx="1150" cy="${580+i*26}" rx="${150-i*16}" ry="5" fill="#ffd27a" opacity="${.6-i*.07}"/>`;
+  s+=waves(640,'#2f6f88',10,'wv b',.9)+waves(700,'#28627a',12,'wv',.9);
+  s+=`<g transform="translate(760 830) scale(.6)"><g class="bob"><g id="seaShip">${ship({id:'s'})}</g></g></g>`;
+  s+=waves(800,'#1f5068',14,'wv b',.95)+waves(860,'#173f55',16,'wv',1);
+  return s}
+
+/* ================= deck ================= */
+function deck(){let s=`<defs><linearGradient id="dsky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a6a9a"/><stop offset=".6" stop-color="#f2a66a"/><stop offset="1" stop-color="#ffd8a0"/></linearGradient>
+  <linearGradient id="plank" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a8723e"/><stop offset="1" stop-color="#7a4a24"/></linearGradient>
+  <radialGradient id="lampG"><stop offset="0" stop-color="#ffe7a0" stop-opacity=".8"/><stop offset="1" stop-color="#ffb05a" stop-opacity="0"/></radialGradient>
+  <radialGradient id="vig" cx=".5" cy=".45" r=".75"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#1a0f08" stop-opacity=".55"/></radialGradient></defs>
+  <rect width="1600" height="900" fill="url(#dsky)"/>`;
+  s+=`<circle cx="300" cy="330" r="70" fill="#ffe7a8" opacity=".9"/>`;
+  s+=`<rect y="300" width="1600" height="150" fill="#2f6f88"/>`+`<g class="wv b"><path d="M-100 330 q25 -6 50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0" fill="none" stroke="#fff4de" stroke-width="3" opacity=".4"/></g>`;
+  // floor
+  s+=`<rect y="440" width="1600" height="460" fill="url(#plank)"/>`;
+  for(let i=0;i<9;i++){const t=i/8,y=440+460*Math.pow(t,1.5);s+=`<path d="M0 ${y.toFixed(0)} H1600" stroke="#5e3a1e" stroke-width="${2+t*3}"/>`}
+  for(let i=-12;i<=12;i++){const xb=800+i*170;s+=`<path d="M${800+i*40} 440 L${xb} 900" stroke="#5e3a1e" stroke-width="3" opacity=".7"/>`}
+  // railing
+  s+=`<rect y="430" width="1600" height="20" fill="#5e3a1e"/>`;
+  for(let x=20;x<1600;x+=70)s+=`<rect x="${x}" y="340" width="22" height="96" rx="8" fill="#9a6a3a" ${ol(3)}/>`;
+  s+=`<rect x="-10" y="322" width="1620" height="28" rx="10" fill="#b07a45" ${ol(4)}/>`;
+  // barrels
+  [[140,600,1],[300,640,.9],[200,720,1.1]].forEach(([x,y,k])=>{s+=`<g transform="translate(${x} ${y}) scale(${k})"><path d="M-60 -80 Q-76 0 -60 80 H60 Q76 0 60 -80Z" fill="#9a6232" ${ol(4)}/><path d="M-66 -40 H66 M-66 40 H66" stroke="#4a4a52" stroke-width="10"/><path d="M-66 -40 H66 M-66 40 H66" ${ol(2)}/><ellipse cx="0" cy="-80" rx="60" ry="14" fill="#b07a45" ${ol(4)}/></g>`});
+  // rope coil
+  s+=`<g transform="translate(560 800)"><ellipse rx="110" ry="36" fill="#d8b47a" ${ol(4)}/><ellipse rx="74" ry="24" fill="none" stroke="#a8844a" stroke-width="8"/><ellipse rx="40" ry="13" fill="#7a5a30" ${ol(3)}/></g>`;
+  // chest
+  s+=`<g transform="translate(1150 720)"><rect x="-120" y="-60" width="240" height="120" rx="12" fill="#8a5a32" ${ol(4)}/><path d="M-120 -60 Q0 -150 120 -60Z" fill="#9a6a3a" ${ol(4)}/><path d="M-120 -40 H120" stroke="#e9b43c" stroke-width="12"/><path d="M-80 -60 V60 M80 -60 V60" stroke="#e9b43c" stroke-width="10"/><rect x="-18" y="-50" width="36" height="40" rx="6" fill="#ffc24a" ${ol(3)}/></g>`;
+  // mast
+  s+=`<rect x="1440" y="-20" width="90" height="940" fill="#8a5a32" ${ol(5)}/><path d="M1466 0 V900" stroke="#6a4020" stroke-width="6"/>`;
+  for(let y=80;y<900;y+=90)s+=`<path d="M1430 ${y} H1540" stroke="#d8b47a" stroke-width="10" stroke-linecap="round"/>`;
+  s+=`<circle cx="1380" cy="210" r="160" fill="url(#lampG)" class="glow"/><path d="M1440 120 H1380 V150" fill="none" ${ol(4)}/><rect x="1356" y="150" width="48" height="70" rx="10" fill="#ffd77a" ${ol(4)}/><path d="M1356 170 H1404 M1356 200 H1404" ${ol(2.5)}/>`;
+  s+=`<rect width="1600" height="900" fill="url(#vig)"/>`;
+  return s}
+
+/* ================= cabin ================= */
+function cabin(){let s=`<defs><radialGradient id="cl" cx=".5" cy=".3" r=".8"><stop offset="0" stop-color="#ffd890" stop-opacity=".55"/><stop offset="1" stop-color="#ffb05a" stop-opacity="0"/></radialGradient></defs>`;
+  s+=`<rect width="1600" height="900" fill="#5e3a1e"/>`;
+  for(let x=0;x<1600;x+=100)s+=`<rect x="${x}" y="0" width="100" height="900" fill="${x/100%2?'#6a4424':'#644020'}"/><path d="M${x} 0 V900" stroke="#3e2410" stroke-width="4"/>`;
+  s+=`<rect y="0" width="1600" height="40" fill="#3e2410"/>`;
+  s+=`<circle cx="1160" cy="490" r="118" fill="#c9a86a" ${ol(5)}/><circle cx="1160" cy="490" r="92" fill="#f2a66a" ${ol(4)}/><path d="M1068 520 Q1160 500 1252 520 V560 Q1160 610 1068 560Z" fill="#2f6f88"/><circle cx="1160" cy="490" r="92" fill="none" ${ol(4)}/><circle cx="1130" cy="470" r="24" fill="#ffe7a8"/>`;
+  for(let a=0;a<8;a++){const t=a*Math.PI/4;s+=`<circle cx="${(1160+105*Math.cos(t)).toFixed(0)}" cy="${(490+105*Math.sin(t)).toFixed(0)}" r="6" fill="#7a5a30"/>`}
+  s+=`<rect width="1600" height="900" fill="url(#cl)"/>`;
+  s+=`<rect y="790" width="1600" height="110" fill="#8a5a32" ${ol(5)}/><path d="M0 812 H1600" stroke="#6a4020" stroke-width="6"/>`;
+  s+=`<g transform="translate(740 790) scale(-1 1)"><rect x="-24" y="-60" width="48" height="60" rx="10" fill="#2a2a3a" ${ol(3)}/><path d="M10 -60 Q40 -140 90 -170" fill="none" stroke="#fff4de" stroke-width="6"/><path d="M90 -170 Q60 -120 20 -64" fill="none" ${ol(2.5)}/></g>`;
+  return s}
+
+/* ================= map ================= */
+function islandShape(cx,cy,rx,ry,seed){const r=rng(seed);const n=9,P=[];for(let i=0;i<n;i++){const t=i/n*Math.PI*2,k=.86+r()*.2;P.push([cx+Math.cos(t)*rx*k,cy+Math.sin(t)*ry*k])}
+  let d=`M${P[0][0].toFixed(1)} ${P[0][1].toFixed(1)}`;for(let i=0;i<n;i++){const p0=P[(i-1+n)%n],p1=P[i],p2=P[(i+1)%n],p3=P[(i+2)%n];const c1=[p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6],c2=[p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6];d+=` C${c1[0].toFixed(1)} ${c1[1].toFixed(1)} ${c2[0].toFixed(1)} ${c2[1].toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`}return d+'Z'}
+function palm(x,y){return `<path d="M${x} ${y} Q${x+6} ${y-40} ${x-4} ${y-70}" fill="none" ${ol(6)}/><path d="M${x-4} ${y-70} q-30 -4 -44 14 M${x-4} ${y-70} q30 -8 42 10 M${x-4} ${y-70} q-6 -26 -28 -30 M${x-4} ${y-70} q14 -24 34 -20" fill="none" stroke="#2f7a3a" stroke-width="9" stroke-linecap="round"/>`}
+function map(){let s=`<defs><radialGradient id="pg" cx=".5" cy=".5" r=".75"><stop offset=".55" stop-color="#f6e4bc"/><stop offset="1" stop-color="#d8b67e"/></radialGradient></defs>`;
+  s+=`<rect width="1600" height="900" fill="#3a2a1e"/>`;
+  s+=`<path d="M18 30 L200 14 L420 34 L640 12 L860 30 L1080 14 L1300 30 L1582 16 L1590 300 L1574 560 L1588 884 L1300 872 L1060 890 L820 870 L560 888 L300 872 L14 886 L30 600 L12 320Z" fill="url(#pg)" ${ol(5)}/>`;
+  const r=rng(9);for(let i=0;i<26;i++){const x=80+r()*1440,y=80+r()*700;s+=`<path d="M${x.toFixed(0)} ${y.toFixed(0)} q12 -10 24 0 t24 0" fill="none" stroke="#8ab4c4" stroke-width="4" stroke-linecap="round" opacity=".8"/>`}
+  // compass
+  s+=`<g transform="translate(150 150)"><circle r="70" fill="#fff4de" ${ol(4)}/><path d="M0 -62 L14 0 L0 62 L-14 0Z" fill="#c8323a" ${ol(3)}/><path d="M-62 0 L0 14 L62 0 L0 -14Z" fill="#2f6b57" ${ol(3)}/><text y="-76" text-anchor="middle" font-size="26" font-weight="700" fill="${INK}">צ</text></g>`;
+  // path segments
+  const P=[[1580,640],[1330,500],[990,360],[660,520],[340,340],[250,610]];
+  for(let i=0;i<P.length-1;i++){const [x1,y1]=P[i],[x2,y2]=P[i+1];const mx=(x1+x2)/2,my=(y1+y2)/2+(i%2?-70:70);
+    s+=`<path class="sw" data-when="8@${i===0?'0':i}+" d="M${x1} ${y1} Q${mx} ${my} ${x2} ${y2}" fill="none" stroke="#b8361f" stroke-width="7" stroke-dasharray="16 16" stroke-linecap="round"/>`}
+  const I=[[1330,500,150,88,3],[990,360,140,84,5],[660,520,140,80,8],[340,340,140,84,13]];
+  I.forEach(([x,y,rx,ry,sd],i)=>{s+=`<g class="sw2" data-when="8@${i+1}+"><path d="${islandShape(x,y+8,rx+16,ry+14,sd)}" fill="#f3d79a" ${ol(3)}/><path d="${islandShape(x,y,rx,ry,sd)}" fill="#7fb85a" ${ol(4)}/>${palm(x+rx*.55,y-ry*.1)}`;
+    if(i===0)s+=`<g transform="translate(${x-40} ${y-10})"><rect x="-30" y="-50" width="60" height="100" rx="12" fill="#1b1f27" ${ol(3)}/><rect x="-22" y="-40" width="44" height="76" rx="5" fill="#ece5dd"/><path d="M-12 -10 l6 6 l10 -12 M0 -10 l6 6 l10 -12" fill="none" stroke="#3a8ee0" stroke-width="4" stroke-linecap="round"/><path d="M40 -60 V-10 Q40 10 20 10 Q4 10 4 -6" fill="none" stroke="#8a93a6" stroke-width="7" stroke-linecap="round"/><circle cx="40" cy="-64" r="6" fill="#8a93a6" ${ol(2)}/></g>`;
+    if(i===1)s+=`<g transform="translate(${x-50} ${y})">${[-44,0,44].map((dx,k)=>`<path d="M${dx-20} -6 Q${dx} 26 ${dx+20} -6Z" fill="${['#e8643a','#ffd34e','#7fb6e0'][k]}" ${ol(3)}/>`).join('')}<path d="M-18 -30 L0 -16 L18 -30" fill="none" stroke="#b8361f" stroke-width="5" stroke-linecap="round"/></g>`;
+    if(i===2)s+=`<g transform="translate(${x-40} ${y-4})"><ellipse rx="54" ry="38" fill="#fff" ${ol(4)}/><text y="16" text-anchor="middle" font-size="44" font-weight="700" fill="#d8432f">לא</text></g>`;
+    if(i===3)s+=`<g transform="translate(${x-60} ${y+10})">${[0,1,2,3].map(k=>`<path d="M${k*34} 20 V-40" ${ol(4)}/><path d="M${k*34} -40 h26 l-6 10 l6 10 h-26Z" fill="${['#ffd34e','#c8323a','#2f6b57','#7a4fb0'][k]}" ${ol(2.5)}/>`).join('')}</g>`;
+    s+=`</g>`});
+  s+=`<g class="sw2" data-when="8@5"><g transform="translate(250 610)"><path d="M-70 -40 L70 40 M70 -40 L-70 40" stroke="#b8361f" stroke-width="14" stroke-linecap="round" opacity=".5"/><rect x="-56" y="-30" width="112" height="64" rx="8" fill="#8a5a32" ${ol(4)}/><path d="M-56 -30 Q0 -84 56 -30Z" fill="#9a6a3a" ${ol(4)}/><path d="M-56 -14 H56" stroke="#e9b43c" stroke-width="8"/><rect x="-10" y="-24" width="20" height="22" rx="4" fill="#ffc24a" ${ol(2.5)}/></g></g>`;
+  return s}
+
+/* ================= bridge bg ================= */
+function bridge(){let s=`<defs><linearGradient id="bsky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1e2a50"/><stop offset=".65" stop-color="#5a4a7a"/><stop offset="1" stop-color="#e98e5a"/></linearGradient></defs><rect width="1600" height="900" fill="url(#bsky)"/>`;
+  const r=rng(4);for(let i=0;i<60;i++)s+=`<circle cx="${(r()*1600).toFixed(0)}" cy="${(r()*500).toFixed(0)}" r="${(1+r()*2).toFixed(1)}" fill="#fff4d0" opacity="${(.4+r()*.5).toFixed(2)}"/>`;
+  s+=`<circle cx="1420" cy="120" r="50" fill="#fff1c8"/>`;
+  s+=`<rect y="760" width="1600" height="140" fill="#1f5068"/>`+waves(790,'#1a4a60',10,'wv',1)+waves(850,'#14394f',12,'wv b',1);
+  return s}
+
+/* ================= table ================= */
+function table(){let s=`<defs><radialGradient id="tg" cx=".35" cy=".3" r=".9"><stop offset="0" stop-color="#b07a45"/><stop offset="1" stop-color="#5e3a1e"/></radialGradient></defs><rect width="1600" height="900" fill="url(#tg)"/>`;
+  for(let y=0;y<900;y+=150)s+=`<path d="M0 ${y} H1600" stroke="#4a2c14" stroke-width="5" opacity=".7"/>`;
+  const r=rng(12);for(let i=0;i<40;i++){const y=r()*900,x=r()*1600;s+=`<path d="M${x.toFixed(0)} ${y.toFixed(0)} q60 -6 120 0" fill="none" stroke="#6a4020" stroke-width="3" opacity=".5"/>`}
+  s+=`<g transform="translate(1440 790)"><circle r="56" fill="#2a2a3a" ${ol(4)}/><circle r="34" fill="#141420"/></g>`;
+  s+=`<g transform="translate(110 120)"><circle r="70" fill="#d8b47a" ${ol(4)}/><circle r="54" fill="#fff4de" ${ol(3)}/><path d="M0 -46 L10 0 L0 46 L-10 0Z" fill="#c8323a" ${ol(2.5)}/></g>`;
+  return s}
+
+/* ================= mini ships / icons ================= */
+function miniShip(crew){let s=`<rect width="420" height="230" rx="16" fill="#cfe6f0"/><path d="M0 180 q35 -10 70 0 t70 0 t70 0 t70 0 t70 0 t70 0 V230 H0Z" fill="#3a7f96"/>`;
+  s+=`<g transform="translate(210 190) scale(.3)">${ship({id:crew?'b':'a',old:!crew,crew:crew})}</g>`;
+  if(!crew){s+=`<g transform="translate(170 40)"><rect x="0" y="0" width="70" height="56" rx="6" fill="#fff4de" ${ol(3)}/><path d="M12 16 H58 M12 28 H58 M12 40 H44" stroke="#8a6a3a" stroke-width="4"/></g>`+
+    `<g transform="translate(300 120)"><circle cx="0" cy="-18" r="17" fill="#f2cfb0" ${ol(3)}/><path d="M-26 -34 Q0 -60 26 -34Z" fill="#2a2a3a" ${ol(3)}/><path d="M-20 0 Q0 -10 20 0 V30 H-20Z" fill="#c8323a" ${ol(3)}/></g>`}
+  else{s+=`<g transform="translate(140 34)"><rect x="0" y="0" width="140" height="64" rx="8" fill="#fff4de" ${ol(3)}/><path d="M14 18 H126 M14 32 H126" stroke="#8a6a3a" stroke-width="4"/><path d="M14 50 q8 -10 16 0 M42 50 l10 -8 M60 46 q8 8 16 -4 M90 50 l12 -10 m-12 0 l12 10 M112 48 q6 -8 14 0" fill="none" stroke="#2a3a6a" stroke-width="3" stroke-linecap="round"/></g>`}
+  return s}
+const ROLE=[
+ `<circle cx="55" cy="55" r="48" fill="#fff4de" ${ol(4)}/><circle cx="55" cy="55" r="36" fill="none" stroke="#d9c49a" stroke-width="3"/><path d="M55 16 L66 55 L55 94 L44 55Z" fill="#c8323a" ${ol(3)}/><path d="M16 55 L55 66 L94 55 L55 44Z" fill="#2f6b57" ${ol(3)}/><circle cx="55" cy="55" r="6" fill="${INK}"/>`,
+ `<path d="M86 10 C60 18 40 44 30 80 L40 84 C52 58 70 36 86 10Z" fill="#fff4de" ${ol(4)}/><path d="M30 80 L22 100" ${ol(5)}/><rect x="56" y="80" width="40" height="22" rx="6" fill="#2a2a3a" ${ol(3)}/><path d="M10 104 H100" stroke="#8a6a3a" stroke-width="4" stroke-linecap="round"/>`,
+ `<path d="M28 10 H82 M28 100 H82" ${ol(7)}/><path d="M32 14 Q32 46 55 55 Q78 46 78 14Z M32 96 Q32 64 55 55 Q78 64 78 96Z" fill="#cfe6f0" ${ol(4)}/><path d="M42 26 Q55 44 68 26Z M38 94 Q55 70 72 94Z" fill="#e9b43c"/>`,
+ `<circle cx="55" cy="55" r="34" fill="none" stroke="#d9c49a" stroke-width="5" stroke-dasharray="8 8"/>${[0,1,2,3].map(k=>{const t=k*Math.PI/2-Math.PI/2;const x=55+40*Math.cos(t),y=55+40*Math.sin(t);return `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="14" fill="${['#c8323a','#2f6b57','#e9b43c','#1d4f8a'][k]}" ${ol(3)}/>`}).join('')}<path d="M44 55 l8 8 l14 -16" fill="none" stroke="#2f6b57" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`];
+function parrot(){return `<path d="M10 272 Q110 256 212 276" fill="none" stroke="${INK}" stroke-width="22" stroke-linecap="round"/><path d="M10 272 Q110 256 212 276" fill="none" stroke="#8a5a32" stroke-width="15" stroke-linecap="round"/>
+  <path d="M120 206 L104 296 L124 292 L138 210Z" fill="#1d6ab0" ${ol(3.5)}/><path d="M132 206 L136 298 L154 286 L146 204Z" fill="#c8323a" ${ol(3.5)}/>
+  <ellipse cx="114" cy="168" rx="58" ry="82" fill="#e8463a" ${ol(4)}/><ellipse cx="100" cy="190" rx="30" ry="50" fill="#f47a5a"/>
+  <g class="wing"><path d="M132 116 Q190 140 172 228 Q150 250 130 226 Q118 170 132 116Z" fill="#3fae4a" ${ol(4)}/><path d="M134 140 Q170 150 170 180" fill="none" stroke="#ffd34e" stroke-width="12" stroke-linecap="round"/><path d="M150 206 Q160 224 146 236" fill="none" stroke="#1d6ab0" stroke-width="12" stroke-linecap="round"/></g>
+  <circle cx="96" cy="82" r="50" fill="#e8463a" ${ol(4)}/>
+  <path d="M90 34 Q96 8 112 4 Q108 22 118 30 Q128 14 142 18 Q126 30 128 46" fill="#ffd34e" ${ol(3)}/>
+  <ellipse cx="86" cy="76" rx="22" ry="20" fill="#fff4de" ${ol(3)}/><circle cx="82" cy="76" r="9" fill="${INK}"/><circle cx="79" cy="72" r="3" fill="#fff"/>
+  <ellipse class="lid" cx="86" cy="64" rx="22" ry="13" fill="#e8463a" ${ol(2.5)}/>
+  <path d="M64 86 Q36 84 34 110 Q34 126 46 132 Q48 116 60 108 Q70 104 74 96Z" fill="#f4e3c8" ${ol(3.5)}/><path d="M48 128 Q56 120 70 112 Q74 124 62 130Z" fill="#3a3040" ${ol(3)}/>
+  <ellipse cx="112" cy="100" rx="9" ry="6" fill="#ff9d8a" opacity=".7"/>
+  <path d="M92 252 v16 m-8 -2 l8 6 l8 -6 M126 252 v16 m-8 -2 l8 6 l8 -6" fill="none" stroke="#6a6a7a" stroke-width="6" stroke-linecap="round"/>`}
+function quill(){return `<path d="M180 14 C120 30 70 80 40 150 L56 160 C86 100 130 56 180 14Z" fill="#fff4de" ${ol(4)}/><path d="M60 140 C90 96 130 56 170 24" fill="none" stroke="#d9c49a" stroke-width="3"/><path d="M40 150 L26 186" ${ol(6)}/><path d="M26 186 l-6 8" stroke="#2a3a6a" stroke-width="6" stroke-linecap="round"/>`}
+
+$('#seaSvg').innerHTML=sea();
+$('#deckSvg').innerHTML=deck();
+$('#cabSvg').innerHTML=cabin();
+$('#mapSvg').innerHTML=map();
+$('#bridgeSvg').innerHTML=bridge();
+$('#tableSvg').innerHTML=table();
+$('#shipA').innerHTML=miniShip(false);
+$('#shipB').innerHTML=miniShip(true);
+['r1','r2','r3','r4'].forEach((id,i)=>$('#'+id).innerHTML=ROLE[i]);
+$('#pollySvg').innerHTML=parrot();
+$('#quill').innerHTML=quill();
+(function(){const g=$('#sigGrid');const r=rng(31);let h='';for(let i=0;i<16;i++){let d=`M${6+r()*10} ${28+r()*8}`;const n=3+Math.floor(r()*3);for(let k=0;k<n;k++)d+=` q${8+r()*10} ${-14-r()*10} ${16+r()*14} ${r()*6} t${10+r()*12} ${-2+r()*6}`;
+  h+=`<i><svg viewBox="0 0 150 46" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="${['#2a3a6a','#7a1a22','#1d6a3a','#20182a'][i%4]}" stroke-width="3.5" stroke-linecap="round" style="transition-delay:${(i*.18).toFixed(2)}s"/></svg></i>`}g.innerHTML=h})();
+})();
+
+(function(){
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const stage=$('#stage');
+const Q=new URLSearchParams(location.search);
+if(Q.has('nofx'))document.documentElement.classList.add('nofx');
+
+/* ================= slides ================= */
+const STEPS=[2,2,2,2,13,2,5,2,6,5,2,1,2,1,1,2,2];
+const N=STEPS.length;
+const DECK_CAM={2:'translate(0px,0px) scale(1)',4:'translate(-80px,-40px) scale(1.08)',5:'translate(-20px,-50px) scale(1.06)',6:'translate(-120px,-20px) scale(1.12)',9:'translate(0px,-80px) scale(1.1)',10:'translate(-60px,-100px) scale(1.12)',11:'translate(-160px,-100px) scale(1.2)',12:'translate(-40px,-30px) scale(1.06)'};
+const DECK_SHADE={2:0,4:.4,5:.38,6:.45,9:.42,10:.4,11:.45,12:.42};
+const SEA_CAM={0:'none',1:'translate(-560px,-315px) scale(1.35)',16:'translate(-60px,-50px) scale(1.07)'};
+const POLLY={2:[150,250,1.8],4:[1330,450,.95],14:[150,470,.85]};
+
+/* true / invented */
+const TF=[
+ ['לכל אחד בצוות יש קול בהצבעה על דברים חשובים.',1,'אמיתי!','זה הסעיף הראשון של רוברטס.'],
+ ['כל אחד מקבל חלק שווה מהאוכל הטרי.',1,'אמיתי!','גם זה כתוב בסעיף הראשון.'],
+ ['בשמונה בערב מכבים את האורות והנרות.',1,'אמיתי!','בשמונה בערב: כיבוי אורות.'],
+ ['התוכי של הקפטן מחליט לאן מפליגים.',0,'המצאנו! 🦜','בספינה של רוברטס, הצוות הצביע לאן להפליג.'],
+ ['אסור להרביץ אחד לשני על הספינה.',1,'אמיתי!','מכות על הספינה? אסור.'],
+ ['לנגנים של הספינה מגיע יום מנוחה בשבוע.',1,'אמיתי!','ביום המנוחה הנגנים לא חייבים לנגן.']
+];
+
+/* ================= presenter notes (Hebrew) ================= */
+const NOTES=[
+ {t:'פתיחה: כולם על הסיפון',m:1,at:'0:00',say:'״שלום ה׳ רימון! היום אנחנו עולים על ספינה.״ (לחיצה) ״כולם קמים! הים גלי… מתנדנדים ימינה, שמאלה.״ ואז: ״מתיישבים, הספינה יוצאת לדרך.״',tip:'השקף הזה הוא המשך ישיר לשני המפגשים של אינה (זהבה ורוזה). אפשר להזכיר: ״בפעם הקודמת אמרנו שבמפגש הזה אתם כותבים את החוקים. הגיע הזמן!״'},
+ {t:'הסיפור: ספינה יוצאת לים',m:1,at:'1:00',say:'״לפני כ־300 שנה, בים הקריבי, ספינות מפרש יצאו להפלגות של חודשים. עשרות מלחים, בלי חוף, בלי מקום ללכת אליו כשרבים.״ (לחיצה) דקה לחשוב ולספר לחבר/ה: מה יכול להשתבש?',tip:'לאסוף 2–3 תשובות בקול (מריבות על אוכל, רעש בלילה, מי מחליט). לא להאריך; נחזור לזה בחוקים האמיתיים.'},
+ {t:'פולי התוכי: מי היו הפיראטים',m:1,at:'2:00',say:'לקרוא את פולי בקול של תוכי (אופציונלי 🙂). להדגיש בפשטות: פיראטים היו שודדי ים, ומה שעשו היה לא בסדר. (לחיצה) ״אבל דבר אחד הם עשו חכם מאוד.״ ידיים למעלה כמו תורן, מי מנחש מה?',tip:'לא להיכנס לקרבות או לעונשים. המיקוד: הם כתבו חוקים יחד.'},
+ {t:'הסעיפים: כתבו יחד, חתמו כולם',m:1.5,at:'3:00',say:'״לפני שיצאו לים, הצוות כתב יחד רשימת חוקים: ׳סעיפים׳.״ (לחיצה) ״וכל אחד חתם. חתימה אומרת: אני מסכים, ואני שומר.״',tip:'מקור: ספר משנת 1724 (A General History of the Pyrates, בשם ״קפטן צ׳רלס ג׳ונסון״) מספר שהצוות של ברתולומיאו רוברטס (פעל 1719–1722) ניסח סעיפים ״כדי לשמור על החבורה ולעשות צדק זה עם זה״, וחתם ונשבע עליהם. הספר הוא המקור העיקרי, ויש בו גם הגזמות. לכן אומרים ״ספר מספר ש…״.'},
+ {t:'משחק: אמת או המצאה?',m:3,at:'4:30',say:'מסבירים: חושבים שזה חוק אמיתי, קמים. חושבים שהמצאנו, יושבים. כל קלף: לחיצה מציגה את החוק, ילדים קמים או יושבים, לחיצה נוספת חושפת את התשובה.',tip:'5 מתוך 6 החוקים אמיתיים (סעיפים I, IV, VIII, XI של רוברטס, בניסוח לילדים). התוכי מומצא, אבל ההצבעה על היעד אמיתית: הצוות של רוברטס הצביע אם להפליג לברזיל או למזרח. בסעיף VIII המקורי כתוב שמריבות ״נגמרות על החוף״. לא להרחיב על זה עם הילדים. בקלף האחרון (הנגנים) כדאי לרמוז: ״זה מזכיר לכם חוק מהעולם שלמדנו?״ (יום בלי וואטסאפ).'},
+ {t:'שתי ספינות: הצבעה ברגליים',m:2.5,at:'7:30',say:'״על איזו ספינה הייתם רוצים להפליג?״ (לחיצה) קמים והולכים לשלט של הספינה שבחרו. שואלים 2–3 ילדים מכל צד: למה?',tip:'לפני השיעור תולים את שני שלטי הספינות (בערכה) בשתי פינות מנוגדות. אם רוב הילדים בספינה ב, לשאול: ״מה טוב בספינה א?״ (מהיר, ברור). לא לשפוט אף בחירה.'},
+ {t:'למה חוקים שלנו עובדים טוב יותר',m:1.5,at:'10:00',say:'חוזרים למקומות. דקה לחשוב. כל לחיצה חושפת סיבה. מי שמסכים מנופף בידיים למעלה (מחיאות כפיים שקטות).',tip:'הציטוט ״כדי למנוע ויכוחים ומריבות אחר כך״ מתאר צוות אחר באותו ספר (ג׳ון פיליפס, 1723). מסר מרכזי: כשאנחנו כותבים בעצמנו, אנחנו מבינים, מסכימים ושומרים.'},
+ {t:'הגשר: גם ה׳ רימון היא ספינה',m:1.5,at:'11:30',say:'״גם אנחנו ספינה: 28 מלחים, ספינה אחת. ואנחנו מפליגים יחד כל יום, גם בקבוצת הוואטסאפ.״ (לחיצה) ״ספינה מפליגה הכי טוב כשכולם מסכימים על החוקים.״ כולם מסובבים הגה דמיוני.',tip:'שם הקבוצה ״ה׳ רימון הנדירים 😎״ לקוח מהמצגת של אינה, כדי שהסדרה תרגיש רציפה. ההודעות בדיוניות. אם בקבוצה האמיתית יש מספר אחר של משתתפים, לעדכן בטקסט.'},
+ {t:'מפת המסע: חזרה על המפגשים',m:3.5,at:'13:00',say:'כל לחיצה מגלה אי, ולכל אי תנועה: (1) הטלפון נותן ולוקח, והקרסים: וי כחול = שתי אצבעות למעלה, התראה = ״דינג!״ וקפיצה, ״מקליד…״ = מתופפים על השולחן. (2) זהבה בוחרת את האמצע. (3) רוזה אומרת לא, ידיים ב־X. (4) ארבעת החוקים מהעולם, קפיצת פופקורן. (5) האוצר: החוקים שלהם.',tip:'אני (אדי) מכיר את המפגש הראשון רק מהתיאור. אינה, כדאי לעדכן את ניסוח האי הראשון לפי מה שהיה בפועל. בכל אי לשאול ״מי זוכר מה למדנו?״ ולתת לילדים לענות לפני החשיפה.'},
+ {t:'הקסם: ״אסור״ הופך ל״כן״',m:2,at:'16:30',say:'״חוק טוב אומר מה כן עושים.״ שלוש לחיצות, שלוש דוגמאות. (לחיצה) תורכם: ״אסור לצחוק על מישהו בקבוצה״. מי שיש לו ״כן״ קם ואומר.',tip:'תשובות טובות: ״בקבוצה שלנו מפרגנים״, ״כותבים רק מה שהיינו אומרים פנים אל פנים״. זה הכלל החשוב לכתיבה בקבוצות.'},
+ {t:'מתחלקים לצוותים',m:1.5,at:'18:30',say:'מחלקים ל־7 צוותים של 4. כל צוות מקבל דף צוות ו־2 כרטיסי חוק. (לחיצה) קמים ועוברים לשולחן, ומחלקים תפקידים: נווט/ת, סופר/ת, שומר/ת זמן, אחראי/ת תורות.',tip:'להכין מראש את החלוקה לצוותים יחד עם המחנכת, כדי לחסוך זמן ולמנוע עלבונות. להניח על כל שולחן: דף צוות, 2 כרטיסי חוק, טוש עבה ועט.'},
+ {t:'כתיבה בצוותים (טיימר 8 דק׳)',m:8,at:'20:00',say:'הטיימר מתחיל לבד (⏯ עצירה, ‎+1 תוספת דקה, ↺ איפוס, או המקש T). להסתובב בין השולחנות ולעזור לנסח בלשון ״כן״. בדקה 6: ״מעתיקים את 2 החוקים הטובים לכרטיסי החוק, באותיות גדולות!״',tip:'צוות תקוע? להצביע על נושא מהרשימה. לשים לב שהניסוח במילים של הילדים ולא של מבוגרים. לא לתקן תוכן, רק לעזור בבהירות.'},
+ {t:'שוק הנמל: סיור והצבעה (טיימר 5 דק׳)',m:5.5,at:'28:00',say:'כל צוות תולה את 2 כרטיסי החוק שלו על הקיר. מחלקים לכל ילד 3 מדבקות עגולות (״מטבעות זהב״). (לחיצה) הטיימר מתחיל: מסתובבים, קוראים ומדביקים. מטבע אחד לכל חוק לכל היותר.',tip:'להכין מראש 7 ״תחנות״ על הקיר עם מסקינטייפ. אין מדבקות? להדפיס את דף המטבעות על נייר צהוב ולהדביק עם דבק נייר. בסוף: כל צוות סופר את המטבעות על הכרטיסים שלו וכותב את המספר בעיגול.'},
+ {t:'בונים את האמנה על המסך',m:6,at:'33:30',say:'כל צוות בתורו מקריא את החוק עם הכי הרבה מטבעות. ״כולם על הסיפון?״ מי שמסכים קם. רוב קמים? מקלידים בתיבה ולוחצים ״הוספה למגילה״ (או Enter). שני ״סופרים״ מעתיקים כל חוק בטוש למגילה המודפסת.',tip:'היעד: 5–8 חוקים. חוקים דומים מאחדים לחוק אחד. בהכנה אפשר ללחוץ ״דוגמה לתרגול״ כדי לראות איך זה נראה, ולפני השיעור ללחוץ ״ניקוי״. הרשימה נשמרת בדפדפן. כדי לשנות סדר או למחוק, מרחפים מעל חוק ומשתמשים בחץ או ב־✕. אף חוק לא נכנס בלי הצבעה של הכיתה.'},
+ {t:'האמנה מוכנה: קוראים יחד',m:1,at:'39:30',say:'״הנה האמנה של ספינת ה׳ רימון!״ כל צוות מקריא חוק אחד בקול.',tip:'כפתור ״הדפסת האמנה (A3)״ מדפיס גרסה נקייה של החוקים שהוקלדו, עם מקום לחתימות. אפשר להדפיס אחרי השיעור ולתלות בכיתה ליד המגילה בכתב יד.'},
+ {t:'טקס החתימה',m:3.5,at:'40:30',say:'צוות אחרי צוות ניגשים למגילה (A3 על שולחן בצד), קוראים שוב את החוקים וחותמים. (לחיצה) ״ידעתם? בשנת 1762 חתמו 200 אנשי צוות על הסכם אחד.״',tip:'עובדה: הסכם הצוות של הספינה האמבוסקייד (1762) שמור במוזיאון הימי המלכותי בגריניץ׳, וכתוב שם שכל 200 אנשי הצוות חתמו או סימנו. זו הייתה ספינה בריטית חוקית ולא ספינת פיראטים. אם הזמן קצר, אפשר להמשיך לחתום בהפסקה.'},
+ {t:'סיום: כולם על הסיפון!',m:1,at:'44:00',say:'״הספינה שלנו מוכנה להפליג.״ (לחיצה) כולם קמים, ובקול אחד: ״כולם על הסיפון!״',tip:'מציעים למחנכת לתלות את המגילה בכיתה, ולשלוח לקבוצת ההורים תמונה של החוקים בלבד, בלי החתימות. מי ששוכח חוק? מזכירים לו בחיוך: ״היי, זה החוק שלנו!״'}
+];
+
+let slide=0,step=0,lessonT0=null;
+const dots=$('#dots');for(let i=0;i<N;i++)dots.appendChild(document.createElement('span'));
+
+function parseWhen(w){/* "4", "4@1", "4@1+", "4@1-3", "2,5" */
+  return w.split(',').map(p=>{const [s,st]=p.split('@');let a=0,b=99;if(st!==undefined){if(st.endsWith('+')){a=+st.slice(0,-1)}else if(st.includes('-')){[a,b]=st.split('-').map(Number)}else{a=b=+st}}return {s:+s,a,b}})}
+const WHEN=$$('[data-when]').map(el=>({el,c:parseWhen(el.dataset.when)}));
+function isOn(c){return c.some(x=>x.s===slide&&step>=x.a&&step<=x.b)}
+
+function renderTF(){if(slide!==4||step<1)return;const i=Math.min(5,Math.floor((step-1)/2)),rev=(step-1)%2===1;const d=TF[i];
+  $('#tfNum').textContent='קלף '+(i+1)+' מתוך 6';$('#tfT').textContent=d[0];
+  const st=$('#tfStamp');st.className='tfStamp '+(d[1]?'real':'fake');st.innerHTML=`<b>${d[2]}</b>${d[3]}`;st.style.visibility=rev?'visible':'hidden';
+  $('#tfBub').textContent=rev?(d[1]?'אמיתי לגמרי!':'חחח, תפסתם אותי!'):'קמים או יושבים?'}
+
+function render(){
+  stage.dataset.slide=slide;stage.dataset.step=step;
+  $$('.layer').forEach(l=>l.classList.toggle('on',l.dataset.on.split(',').map(Number).includes(slide)));
+  WHEN.forEach(({el,c})=>el.classList.toggle('on',isOn(c)));
+  if(SEA_CAM[slide])$('#seaCam').style.transform=SEA_CAM[slide];
+  if(DECK_CAM[slide])$('#deckCam').style.transform=DECK_CAM[slide];
+  if(slide in DECK_SHADE)$('#deckShade').style.background=`rgba(18,22,40,${DECK_SHADE[slide]})`;
+  const old=slide===1;const fp=$('#sflagPom'),fo=$('#sflagOld');if(fp){fp.style.display=old?'none':'';fo.style.display=old?'':'none'}
+  const p=POLLY[slide],pe=$('#polly');
+  if(p){pe.style.transform=`translate(${p[0]}px,${p[1]}px) scale(${p[2]})`;pe.classList.add('on')}else pe.classList.remove('on');
+  renderTF();
+  if(slide===14)fitCharter();
+  if(slide===13)fitBuilder();
+  timersOnSlide();
+  [...dots.children].forEach((d,i)=>d.classList.toggle('cur',i===slide));
+  $('#prevBtn').disabled=slide===0&&step===0;$('#nextBtn').disabled=slide===N-1&&step===STEPS[N-1]-1;
+  if(slide>0&&lessonT0===null)lessonT0=Date.now();
+  renderNotes();
+  try{history.replaceState(null,'','#s='+slide+'.'+step)}catch(e){}
+  try{bc&&bc.postMessage({type:'state',slide,step})}catch(e){}
+}
+function go(s,st){slide=Math.max(0,Math.min(N-1,s));step=Math.max(0,Math.min(STEPS[slide]-1,st||0));render()}
+function next(){if(step<STEPS[slide]-1)step++;else if(slide<N-1){slide++;step=0}render()}
+function prev(){if(step>0)step--;else if(slide>0){slide--;step=STEPS[slide]-1}render()}
+
+/* ================= notes ================= */
+const notesEl=$('#notes');
+function fmt(ms){const s=Math.max(0,Math.floor(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+function noteHTML(i){const n=NOTES[i];const el=lessonT0?fmt(Date.now()-lessonT0):'0:00';
+  return `<h4><b>שקף ${i+1}/${N} · ${n.t}</b><span>⏱ ${n.m} דק׳ · מתחיל ב־${n.at} · עבר: <span class="el">${el}</span> · שלב ${step+1}/${STEPS[i]}</span></h4><p><b>מה עושים ואומרים:</b> ${n.say}</p><p><b>טיפ:</b> ${n.tip}</p><p class="k">מקשים: רווח/← הבא · → הקודם · N הערות · P חלון מציג · T טיימר · F מסך מלא · Home התחלה</p>`}
+function renderNotes(){if(notesEl.classList.contains('on'))notesEl.innerHTML=noteHTML(slide)}
+setInterval(()=>{const e=notesEl.querySelector('.el');if(e&&lessonT0)e.textContent=fmt(Date.now()-lessonT0);try{bc&&bc.postMessage({type:'state',slide,step})}catch(_){}} ,1000);
+function toggleNotes(){notesEl.classList.toggle('on');renderNotes()}
+
+/* presenter window (P) */
+let bc=null;try{bc=new BroadcastChannel('charter-deck');bc.onmessage=e=>{const d=e.data||{};if(d.type==='next')next();else if(d.type==='prev')prev();else if(d.type==='hello')bc.postMessage({type:'state',slide,step})}}catch(e){}
+function presenterWindow(){const w=window.open('','charterNotes','width=980,height=720');if(!w)return;
+  const data=JSON.stringify({NOTES,STEPS});
+  w.document.open();w.document.write(`<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>הערות מציג: כולם על הסיפון</title><style>body{margin:0;background:#0e1422;color:#f4ead6;font:22px/1.55 Arial,'Arial Hebrew',sans-serif;padding:24px 30px}h1{font-size:30px;color:#ffc24a;margin:0 0 6px}.m{color:#9fc4e8;font-size:20px;margin-bottom:14px}.nx{margin-top:22px;padding-top:12px;border-top:2px solid #3a4866;color:#b9c4d8;font-size:19px}button{font:700 22px Arial;padding:10px 22px;border-radius:12px;border:2px solid #56668a;background:#ffc24a;margin-left:10px;cursor:pointer}#clk{font-size:40px;color:#7fe0a0;direction:ltr;display:inline-block}</style></head><body>
+  <div><button id="p">→ הקודם</button><button id="n">הבא ←</button> <span id="clk">0:00</span></div><div id="o"></div>
+  <script>const D=${data.replace(/</g,'\\u003c')};const bc=new BroadcastChannel('charter-deck');const t0=Date.now();
+  function show(s,st){const n=D.NOTES[s],x=D.NOTES[s+1];document.getElementById('o').innerHTML='<h1>שקף '+(s+1)+' · '+n.t+'</h1><div class="m">⏱ '+n.m+' דק׳ · מתחיל ב־'+n.at+' · שלב '+(st+1)+'/'+D.STEPS[s]+'</div><p><b>מה עושים ואומרים:</b> '+n.say+'</p><p><b>טיפ:</b> '+n.tip+'</p>'+(x?'<div class="nx">הבא: '+x.t+' ('+x.m+' דק׳)</div>':'')}
+  bc.onmessage=e=>{if(e.data.type==='state')show(e.data.slide,e.data.step)};bc.postMessage({type:'hello'});
+  document.getElementById('n').onclick=()=>bc.postMessage({type:'next'});document.getElementById('p').onclick=()=>bc.postMessage({type:'prev'});
+  addEventListener('keydown',e=>{if(['ArrowLeft',' ','PageDown'].includes(e.key)){e.preventDefault();bc.postMessage({type:'next'})}if(['ArrowRight','PageUp'].includes(e.key)){e.preventDefault();bc.postMessage({type:'prev'})}});
+  setInterval(()=>{const s=Math.floor((Date.now()-t0)/1000);document.getElementById('clk').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0')},1000);<\/script></body></html>`);w.document.close()}
+
+/* ================= timers ================= */
+const TIMERS={};
+$$('.timer').forEach(el=>{const T={el,total:+el.dataset.min*60,left:+el.dataset.min*60,run:false,iv:null,started:false};TIMERS[el.id]=T;
+  el.addEventListener('click',e=>{e.stopPropagation();const b=e.target.closest('button');if(!b)return;const a=b.dataset.t;
+    if(a==='toggle')tToggle(T);else if(a==='plus'){T.left+=60;tDraw(T)}else if(a==='reset'){tStop(T);T.left=T.total;T.started=false;tDraw(T)}})});
+function tDraw(T){T.el.querySelector('.clock').textContent=fmt(T.left*1000);T.el.classList.toggle('low',T.left<=60&&T.left>0);T.el.classList.toggle('done',T.left<=0)}
+function tStart(T){if(T.run)return;T.run=true;T.started=true;T.iv=setInterval(()=>{T.left--;tDraw(T);if(T.left<=0){tStop(T);chime()}},1000)}
+function tStop(T){T.run=false;clearInterval(T.iv)}
+function tToggle(T){T.run?tStop(T):tStart(T)}
+function timersOnSlide(){Object.values(TIMERS).forEach(T=>{const on=T.el.classList.contains('on');if(on&&(!T.started||T.resume)&&T.left>0&&!Q.has('nofx')){T.resume=false;tStart(T)}if(!on&&T.run){tStop(T);T.resume=true}})}
+function chime(){try{const c=new (window.AudioContext||window.webkitAudioContext)();[0,.25,.5].forEach((d,i)=>{const o=c.createOscillator(),g=c.createGain();o.frequency.value=[660,880,990][i];g.gain.setValueAtTime(.0001,c.currentTime+d);g.gain.exponentialRampToValueAtTime(.2,c.currentTime+d+.02);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+d+.4);o.connect(g).connect(c.destination);o.start(c.currentTime+d);o.stop(c.currentTime+d+.45)})}catch(e){}}
+
+/* ================= charter builder ================= */
+const SAMPLE=['כותבים קצר וברור: הודעה אחת במקום עשר.','שיחה מסתבכת? כל אחד יכול להגיד: ״בואו נעצור״.','שואלים לפני ששולחים תמונה או הודעה של מישהו אחר.','אחרי 21:00 הספינה ישנה. ממשיכים מחר בבוקר.','מישהו לא עונה? אולי הוא אוכל או משחק. מחכים בסבלנות.','כותבים רק מה שהיינו אומרים גם פנים אל פנים.','כשנפגשים, הטלפון בתיק ואנחנו ביחד.','יום אחד בשבוע הספינה נחה מוואטסאפ.'];
+let rules=[];try{rules=JSON.parse(localStorage.getItem('charterRules')||'[]')}catch(e){}
+if(Q.has('sample'))rules=SAMPLE.slice();
+function save(){try{localStorage.setItem('charterRules',JSON.stringify(rules))}catch(e){}}
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function drawRules(){
+  $('#bRules').innerHTML=rules.map((r,i)=>`<li><span class="tx">${esc(r)}</span><span class="ctl"><button type="button" data-a="up" data-i="${i}" aria-label="להעלות">▲</button><button type="button" data-a="del" data-i="${i}" aria-label="למחוק">✕</button></span></li>`).join('');
+  $('#bEmpty').style.display=rules.length?'none':'';
+  $('#cList').innerHTML=rules.length?rules.map(r=>`<li>${esc(r)}</li>`).join(''):`<li style="color:#a08a6a">עדיין אין חוקים. חוזרים לשקף הקודם ומוסיפים.</li>`;
+  const n=rules.length;$('#bCount').textContent=n>=8?`${n} חוקים · המגילה מלאה!`:`${n} חוקים · היעד: 5–8`;
+  $('#addRule').disabled=n>=8;fitBuilder();fitCharter()}
+function fitList(box,list,max,min){if(!box.offsetParent&&!box.closest('.layer.on'))return;let f=max;list.style.fontSize='';$$('#'+list.id+' li').forEach(li=>li.style.fontSize=f+'px');
+  while(f>min&&box.scrollHeight>box.clientHeight+1){f-=1;$$('#'+list.id+' li').forEach(li=>li.style.fontSize=f+'px')}}
+function fitBuilder(){fitList($('#bBody'),$('#bRules'),32,20)}
+function fitCharter(){fitList($('#cRules'),$('#cList'),44,22)}
+function addRule(){const v=$('#ruleIn').value.trim().replace(/\s+/g,' ');if(!v||rules.length>=8)return;rules.push(v);$('#ruleIn').value='';save();drawRules();$('#ruleIn').focus()}
+$('#addRule').addEventListener('click',e=>{e.stopPropagation();addRule()});
+$('#ruleIn').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();addRule()}});
+$('#sampleRules').addEventListener('click',e=>{e.stopPropagation();rules=SAMPLE.slice();save();drawRules()});
+$('#clearRules').addEventListener('click',e=>{e.stopPropagation();if(!rules.length||confirm('למחוק את כל החוקים מהמגילה?')){rules=[];save();drawRules()}});
+$('#bRules').addEventListener('click',e=>{e.stopPropagation();const b=e.target.closest('button');if(!b)return;const i=+b.dataset.i;
+  if(b.dataset.a==='del')rules.splice(i,1);else if(b.dataset.a==='up'&&i>0)[rules[i-1],rules[i]]=[rules[i],rules[i-1]];save();drawRules()});
+$('#printBtn').addEventListener('click',e=>{e.stopPropagation();const po=$('#printOut');
+  po.innerHTML=`<h1>האמנה של ספינת ה׳ רימון</h1><p class="ps">כתבנו יחד · הסכמנו יחד · שומרים יחד · אשכולות, בנימינה · ינואר 2027</p><ol>${rules.map(r=>`<li>${esc(r)}</li>`).join('')}</ol><h2>חתימות הצוות</h2><div class="sg">${'<i></i>'.repeat(30)}</div>`;window.print()});
+drawRules();
+
+/* ================= input ================= */
+$('#nextBtn').addEventListener('click',e=>{e.stopPropagation();next()});
+$('#prevBtn').addEventListener('click',e=>{e.stopPropagation();prev()});
+$('#notesBtn').addEventListener('click',e=>{e.stopPropagation();toggleNotes()});
+function fs(){try{const d=document;if(d.fullscreenElement)d.exitFullscreen().catch(()=>{});else d.documentElement.requestFullscreen().catch(()=>{})}catch(err){}}
+$('#fsBtn').addEventListener('click',e=>{e.stopPropagation();fs()});
+stage.addEventListener('click',e=>{if(e.target.closest('button,input,textarea,#nav,#bPanel,#bScroll,.timer'))return;next()});
+document.addEventListener('keydown',e=>{if(e.target.closest&&e.target.closest('textarea,input'))return;
+  const k=e.key;
+  if(['ArrowLeft','PageDown',' ','Enter'].includes(k)){if((k==='Enter'||k===' ')&&e.target.closest&&e.target.closest('button'))return;e.preventDefault();next()}
+  else if(['ArrowRight','PageUp'].includes(k)){e.preventDefault();prev()}
+  else if(k==='Home'){go(0,0)}
+  else if(k==='n'||k==='N'||k==='מ'){toggleNotes()}
+  else if(k==='p'||k==='P'||k==='פ'){presenterWindow()}
+  else if(k==='f'||k==='F'||k==='כ'){fs()}
+  else if(k==='t'||k==='T'||k==='א'){Object.values(TIMERS).forEach(T=>{if(T.el.classList.contains('on'))tToggle(T)})}
+});
+function fit(){const f=$('#fit');const s=Math.min(f.clientWidth/1600,f.clientHeight/900);stage.style.setProperty('--s',s)}
+addEventListener('resize',fit);fit();
+const m=/s=(\d+)(?:\.(\d+))?/.exec(location.hash);
+window.deck={go,next,prev,N,STEPS,get state(){return {slide,step}},NOTES};
+if(m)go(+m[1],+(m[2]||0));else render();
+})();
+</script>
+</body></html>
