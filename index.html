@@ -263,6 +263,7 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
 #notes{position:fixed;left:12px;right:12px;bottom:12px;z-index:100;max-height:46vh;overflow:auto;background:rgba(14,20,34,.96);color:#f4ead6;border:2px solid #56668a;border-radius:16px;
   padding:14px 22px 16px;font:18px/1.5 var(--f);direction:rtl;display:none;box-shadow:0 10px 40px rgba(0,0,0,.6)}
 #notes.on{display:block}
+@media (hover:none),(pointer:coarse){#notes.on{display:none!important}}
 #notes h4{margin:0 0 6px;font-size:20px;color:var(--gold);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 #notes h4 span{color:#9fc4e8;font-weight:700}
 #notes p{margin:4px 0}
@@ -471,7 +472,6 @@ button:focus-visible{outline:4px solid var(--sky);outline-offset:3px}
     <button class="nb" id="prevBtn" type="button" aria-label="שקף קודם"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
     <div id="dots"></div>
     <button class="nb" id="nextBtn" type="button" aria-label="שקף הבא"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-    <button class="nb sm" id="notesBtn" type="button" aria-label="הערות למציג">N</button>
     <button class="nb sm" id="fsBtn" type="button" aria-label="מסך מלא"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   </nav>
 </div>
@@ -743,6 +743,11 @@ function noteHTML(i){const n=NOTES[i];const el=lessonT0?fmt(Date.now()-lessonT0)
 function renderNotes(){if(notesEl.classList.contains('on'))notesEl.innerHTML=noteHTML(slide)}
 setInterval(()=>{const e=notesEl.querySelector('.el');if(e&&lessonT0)e.textContent=fmt(Date.now()-lessonT0);try{bc&&bc.postMessage({type:'state',slide,step})}catch(_){}} ,1000);
 function toggleNotes(){notesEl.classList.toggle('on');renderNotes()}
+function closeNotes(){notesEl.classList.remove('on')}
+notesEl.classList.remove('on');
+/* notes open ONLY via the N key; any tap/click (on the panel or outside) or Escape closes them */
+document.addEventListener('pointerdown',e=>{if(notesEl.classList.contains('on')){closeNotes();e.stopPropagation();e.preventDefault();window.__notesClosedAt=Date.now()}},true);
+document.addEventListener('click',e=>{if(window.__notesClosedAt&&Date.now()-window.__notesClosedAt<700){window.__notesClosedAt=0;e.stopPropagation();e.preventDefault()}},true);
 
 /* presenter window (P) */
 let bc=null;try{bc=new BroadcastChannel('charter-deck');bc.onmessage=e=>{const d=e.data||{};if(d.type==='next')next();else if(d.type==='prev')prev();else if(d.type==='hello')bc.postMessage({type:'state',slide,step})}}catch(e){}
@@ -799,15 +804,19 @@ drawRules();
 /* ================= input ================= */
 $('#nextBtn').addEventListener('click',e=>{e.stopPropagation();next()});
 $('#prevBtn').addEventListener('click',e=>{e.stopPropagation();prev()});
-$('#notesBtn').addEventListener('click',e=>{e.stopPropagation();toggleNotes()});
 function fs(){try{const d=document;if(d.fullscreenElement)d.exitFullscreen().catch(()=>{});else d.documentElement.requestFullscreen().catch(()=>{})}catch(err){}}
 $('#fsBtn').addEventListener('click',e=>{e.stopPropagation();fs()});
-stage.addEventListener('click',e=>{if(e.target.closest('button,input,textarea,#nav,#bPanel,#bScroll,.timer'))return;next()});
+let sw=null,swAt=0;
+stage.addEventListener('touchstart',e=>{const t=e.touches[0];sw=t&&e.touches.length===1?{x:t.clientX,y:t.clientY}:null},{passive:true});
+stage.addEventListener('touchend',e=>{if(!sw)return;const t=e.changedTouches[0],dx=t.clientX-sw.x,dy=t.clientY-sw.y;sw=null;
+  if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.3){swAt=Date.now();dx>0?next():prev()}},{passive:true});
+stage.addEventListener('click',e=>{if(Date.now()-swAt<500)return;if(e.target.closest('button,input,textarea,#nav,#bPanel,#bScroll,.timer'))return;next()});
 document.addEventListener('keydown',e=>{if(e.target.closest&&e.target.closest('textarea,input'))return;
   const k=e.key;
   if(['ArrowLeft','PageDown',' ','Enter'].includes(k)){if((k==='Enter'||k===' ')&&e.target.closest&&e.target.closest('button'))return;e.preventDefault();next()}
   else if(['ArrowRight','PageUp'].includes(k)){e.preventDefault();prev()}
   else if(k==='Home'){go(0,0)}
+  else if(k==='Escape'){closeNotes()}
   else if(k==='n'||k==='N'||k==='מ'){toggleNotes()}
   else if(k==='p'||k==='P'||k==='פ'){presenterWindow()}
   else if(k==='f'||k==='F'||k==='כ'){fs()}
